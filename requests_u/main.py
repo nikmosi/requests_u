@@ -5,6 +5,7 @@ import aiofiles
 import aiohttp
 import fake_useragent as fa
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 from loguru import logger
 
 domain = "https://tl.rulate.ru"
@@ -27,10 +28,9 @@ class LoadedChapter(Chapter):
         return f"{self.id}. {self.name}"
 
 
-def raise_if_bad_response(response) -> None:
-    if response.status != 200:
-        logger.error(f"get {response.status} from {response.url}")
-        raise Exception(f"Bad response status {response.status}")
+async def get_soup(session, url) -> BeautifulSoup:
+    html = await get_html(session, url)
+    return BeautifulSoup(html, "lxml")
 
 
 async def get_html(session, url) -> str:
@@ -39,31 +39,29 @@ async def get_html(session, url) -> str:
         return await r.text()
 
 
-async def get_soup(session, url) -> BeautifulSoup:
-    html = await get_html(session, url)
-    return BeautifulSoup(html, "lxml")
+def raise_if_bad_response(response) -> None:
+    if response.status != 200:
+        msg = f"get bad {response.status} from {response.url}"
+        logger.error(msg)
+        raise Exception(msg)
 
 
-async def save_chapter(chapter: LoadedChapter) -> None:
-    file_name = chapter.base_name
-    file_name_with_ext = f"{file_name}.txt"
-    async with aiofiles.open(file_name_with_ext, "w") as f:
-        logger.debug(f"write text {file_name_with_ext}")
-        await f.write(chapter.title)
-        await f.write("\n\n")
-        for i in chapter.paragraphs:
-            await f.write(i)
-            await f.write("\n")
+def raise_if_not_tag(value) -> Tag:
+    if value is not Tag:
+        msg = "parsing error"
+        logger.error(msg)
+        raise ValueError(msg)
+    return value
 
 
 async def handle_chapter(session, chapter: Chapter):
     logger.debug(f"handle {chapter.name}")
-    logger.debug(f"getting html for {chapter.id} {chapter.name}")
 
     soup = await get_soup(session, chapter.link)
-    text_container = soup.find(id="text-container")
-    title = text_container.find("h1").text
-    content_text = text_container.find("div", class_="content-text")
+
+    text_container = raise_if_not_tag(soup.find(id="text-container"))
+    title = raise_if_not_tag(text_container.find("h1")).text
+    content_text = raise_if_not_tag(text_container.find("div", class_="content-text"))
     ps = map(lambda a: a.text, content_text.find_all("p"))
     image_links = map(lambda a: f"{domain}{a.get('src')}", content_text.find_all("img"))
 
@@ -78,8 +76,20 @@ async def handle_chapter(session, chapter: Chapter):
         )
 
 
+async def save_chapter(chapter: LoadedChapter) -> None:
+    file_name = chapter.base_name
+    file_name_with_ext = f"{file_name}.txt"
+    async with aiofiles.open(file_name_with_ext, "w") as f:
+        logger.debug(f"write text {file_name_with_ext}")
+        await f.write(chapter.title)
+        await f.write("\n\n")
+        for i in chapter.paragraphs:
+            await f.write(i)
+            await f.write("\n")
+
+
 async def hanlde_image_links(session, image_prefix, image_links) -> None:
-    for index, link in enumerate(image_links):
+    for index, link in enumerate(image_links, 1):
         ext = link.split(".")[-1]
         image = await load_image(session, link)
         await save_image(image, f"{image_prefix} {index}.{ext}")
@@ -119,8 +129,8 @@ def to_chapaters(rows):
 async def run(session: aiohttp.ClientSession):
     logger.debug("run")
     soup = await get_soup(session, f"{domain}/book/77486")
-    chapter_rows = soup.find_all(class_="chapter_row")
     logger.debug("getting chapters url")
+    chapter_rows = soup.find_all(class_="chapter_row")
 
     async with asyncio.TaskGroup() as tg:
         for chapter in to_chapaters(chapter_rows):

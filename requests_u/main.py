@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 from dataclasses import asdict
 from typing import Iterable
@@ -109,8 +110,15 @@ def to_chapaters(rows):
 
 @logger.catch
 async def run(session: aiohttp.ClientSession):
+    global domain
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "url", help="url to book (example: https://tl.rulate.ru/book/xxxxx)", type=URL
+    )
+    args = parser.parse_args()
     logger.debug("run")
-    book_url = domain.joinpath("book/77486")
+    book_url = args.url
+    domain = book_url.with_path("")
     main_page_soup = await get_soup(session, book_url)
     logger.debug("getting chapters url")
     chapter_rows = main_page_soup.find_all(class_="chapter_row")

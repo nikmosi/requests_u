@@ -1,85 +1,18 @@
 import asyncio
-from dataclasses import asdict, dataclass
-from http import HTTPStatus
+from dataclasses import asdict
 from typing import Iterable
 
 import aiofiles
 import aiohttp
 import fake_useragent as fa
 from bs4 import BeautifulSoup
-from bs4.element import Tag
+from helpers import Raiser
 from loguru import logger
+from models import Chapter, LoadedChapter, LoadedImage
+from TextContainer import TextContainer
 from yarl import URL
 
 domain = URL("https://tl.rulate.ru")
-
-
-@dataclass
-class Chapter:
-    id: int
-    name: str
-    url: URL
-
-    @property
-    def base_name(self) -> str:
-        return f"{self.id}. {self.name}"
-
-
-@dataclass
-class LoadedImage:
-    url: URL
-    data: bytes
-
-    @property
-    def extension(self) -> str:
-        return self.url.suffix
-
-
-@dataclass
-class LoadedChapter(Chapter):
-    paragraphs: Iterable[str]
-    images: Iterable[LoadedImage]
-    title: str
-
-
-class Raiser:
-    @staticmethod
-    def check_on_tag(value) -> Tag:
-        if isinstance(value, Tag):
-            return value
-        msg = f"parsing error got {type(value)}"
-        logger.error(msg)
-        raise ValueError(msg)
-
-    @staticmethod
-    def check_response(response) -> None:
-        if response.status != HTTPStatus.OK:
-            msg = f"get bad {response.status} from {response.url}"
-            logger.error(msg)
-            raise Exception(msg)
-
-
-@dataclass
-class TextContainer:
-    html_title: Tag
-    paragraphs: Iterable[str]
-    images_urls: Iterable[URL]
-
-    @property
-    def title(self) -> str:
-        return self.html_title.text
-
-    @staticmethod
-    def parse(soup) -> "TextContainer":
-        text_container = parse_text_container(soup)
-        html_title = parse_title(text_container)
-        content_text = parse_context_text(text_container)
-        paragraphs = parse_paragraphs(content_text)
-        images_urls = parse_images_urls(content_text)
-
-        return TextContainer(
-            html_title=html_title, paragraphs=paragraphs, images_urls=images_urls
-        )
 
 
 async def get_soup(session: aiohttp.ClientSession, url: URL) -> BeautifulSoup:
@@ -104,8 +37,8 @@ async def load_chapter(
 ) -> LoadedChapter:
     soup = await get_soup(session, chapter.url)
 
-    text_container = TextContainer.parse(soup)
-    images = await get_images_by_urls(session, text_container.images_urls)
+    text_container = TextContainer.parse(soup, domain)
+    images = await load_images_by_urls(session, text_container.images_urls)
 
     return LoadedChapter(
         **asdict(chapter),
@@ -115,32 +48,7 @@ async def load_chapter(
     )
 
 
-def parse_text_container(soup: BeautifulSoup) -> Tag:
-    class_ = id = "text-container"
-    text_container = soup.find("div", id=id, class_=class_)
-    return Raiser.check_on_tag(text_container)
-
-
-def parse_title(text_container: Tag) -> Tag:
-    title = text_container.find("h1")
-    return Raiser.check_on_tag(title)
-
-
-def parse_context_text(text_container: Tag) -> Tag:
-    class_ = "content-text"
-    context_text = text_container.find("div", class_=class_)
-    return Raiser.check_on_tag(context_text)
-
-
-def parse_paragraphs(content_text: Tag) -> Iterable[str]:
-    return map(lambda a: a.text, content_text.find_all("p"))
-
-
-def parse_images_urls(content_text: Tag) -> Iterable[URL]:
-    return map(lambda a: domain.with_path(a.get("src")), content_text.find_all("img"))
-
-
-async def get_images_by_urls(
+async def load_images_by_urls(
     session: aiohttp.ClientSession, urls: Iterable[URL]
 ) -> Iterable[LoadedImage]:
     tasks = []

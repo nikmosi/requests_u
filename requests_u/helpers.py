@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from typing import Any
 
 from bs4.element import Tag
 from loguru import logger
@@ -6,8 +7,16 @@ from loguru import logger
 
 class Raiser:
     @staticmethod
+    def check_on_str(value) -> str:
+        return Raiser._check_on_type(value, str)
+
+    @staticmethod
     def check_on_tag(value) -> Tag:
-        if isinstance(value, Tag):
+        return Raiser._check_on_type(value, Tag)
+
+    @staticmethod
+    def _check_on_type(value, type_) -> Any:
+        if isinstance(value, type_):
             return value
         msg = f"parsing error got {type(value)}"
         logger.error(msg)

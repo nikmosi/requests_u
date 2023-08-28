@@ -7,6 +7,7 @@ import aiofiles
 import aiohttp
 import fake_useragent as fa
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 from helpers import Raiser
 from loguru import logger
 from models import Chapter, LoadedChapter, LoadedImage
@@ -100,12 +101,19 @@ def get_headers() -> dict:
     }
 
 
-def to_chapaters(rows):
+def to_chapaters(rows: Iterable[Tag]):
     for index, row in enumerate(rows, 1):
-        a = row.find_next("a")
-        url = domain.with_path(a.get("href"))
+        if not can_read(row):
+            continue
+        a = Raiser.check_on_tag(row.find_next("a"))
+        href = Raiser.check_on_str(a.get("href"))
+        url = domain.with_path(href)
         name = a.text
         yield Chapter(id=index, name=name, url=url)
+
+
+def can_read(row: Tag) -> bool:
+    return row.find("span", class_="disabled") is None
 
 
 @logger.catch

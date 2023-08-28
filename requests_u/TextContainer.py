@@ -52,6 +52,10 @@ class TextContainer:
 
     @staticmethod
     def _parse_images_urls(content_text: Tag, domain: URL) -> Iterable[URL]:
-        return map(
-            lambda a: domain.with_path(a.get("src")), content_text.find_all("img")
-        )
+        for i in content_text.find_all("img"):
+            src = i.get("src")
+            url_src = URL(src)
+            if url_src.is_absolute():
+                yield url_src
+            else:
+                yield domain.with_path(src)

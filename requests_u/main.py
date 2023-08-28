@@ -103,17 +103,17 @@ def get_headers() -> dict:
 
 def to_chapaters(rows: Iterable[Tag]):
     for index, row in enumerate(rows, 1):
-        if not can_read(row):
-            continue
-        a = Raiser.check_on_tag(row.find_next("a"))
-        href = Raiser.check_on_str(a.get("href"))
-        url = domain.with_path(href)
-        name = a.text
-        yield Chapter(id=index, name=name, url=url)
+        if can_read(row):
+            a = Raiser.check_on_tag(row.find_next("a"))
+            href = Raiser.check_on_str(a.get("href"))
+            url = domain.with_path(href)
+            name = a.text
+            yield Chapter(id=index, name=name, url=url)
 
 
 def can_read(row: Tag) -> bool:
-    return row.find("span", class_="disabled") is None
+    span = row.find("span", class_="disabled")
+    return span is None
 
 
 @logger.catch

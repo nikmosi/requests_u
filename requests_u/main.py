@@ -30,6 +30,10 @@ class LoadedImage:
     url: URL
     data: bytes
 
+    @property
+    def extension(self) -> str:
+        return self.url.suffix
+
 
 @dataclass
 class LoadedChapter(Chapter):
@@ -40,7 +44,7 @@ class LoadedChapter(Chapter):
 
 class Raiser:
     @staticmethod
-    def if_not_tag(value) -> Tag:
+    def check_on_tag(value) -> Tag:
         if isinstance(value, Tag):
             return value
         msg = f"parsing error got {type(value)}"
@@ -48,7 +52,7 @@ class Raiser:
         raise ValueError(msg)
 
     @staticmethod
-    def if_bad_response(response) -> None:
+    def check_response(response) -> None:
         if response.status != HTTPStatus.OK:
             msg = f"get bad {response.status} from {response.url}"
             logger.error(msg)
@@ -62,31 +66,56 @@ async def get_soup(session: aiohttp.ClientSession, url: URL) -> BeautifulSoup:
 
 async def get_html(session: aiohttp.ClientSession, url: URL) -> str:
     async with session.get(url=url, headers=get_headers()) as r:
-        Raiser.if_bad_response(r)
+        Raiser.check_response(r)
         return await r.text()
 
 
 async def handle_chapter(session: aiohttp.ClientSession, chapter: Chapter) -> None:
     logger.debug(f"{handle_chapter.__name__} {chapter.base_name}")
+    loaded_chapter = await load_chapter(session, chapter)
+    await save_chapter(loaded_chapter)
 
+
+async def load_chapter(
+    session: aiohttp.ClientSession, chapter: Chapter
+) -> LoadedChapter:
     soup = await get_soup(session, chapter.url)
 
-    text_container = Raiser.if_not_tag(
-        soup.find("div", id="text-container", class_="text-container")
-    )
-    title = Raiser.if_not_tag(text_container.find("h1")).text
-    content_text = Raiser.if_not_tag(text_container.find("div", class_="content-text"))
-    ps = map(lambda a: a.text, content_text.find_all("p"))
-    images_urls = map(
-        lambda a: domain.with_path(a.get("src")), content_text.find_all("img")
-    )
+    text_container = parse_text_container(soup)
+    html_title = parse_title(text_container)
+    content_text = parse_context_text(text_container)
+    paragraphs = parse_paragraphs(content_text)
+    images_urls = parse_images_urls(content_text)
     images = await get_images_by_urls(session, images_urls)
 
-    loaded_chapter = LoadedChapter(
-        **asdict(chapter), title=title, paragraphs=ps, images=images
+    return LoadedChapter(
+        **asdict(chapter), title=html_title.text, paragraphs=paragraphs, images=images
     )
 
-    await save_chapter(loaded_chapter)
+
+def parse_text_container(soup: BeautifulSoup) -> Tag:
+    class_ = id = "text-container"
+    text_container = soup.find("div", id=id, class_=class_)
+    return Raiser.check_on_tag(text_container)
+
+
+def parse_title(text_container: Tag) -> Tag:
+    title = text_container.find("h1")
+    return Raiser.check_on_tag(title)
+
+
+def parse_context_text(text_container: Tag) -> Tag:
+    class_ = "content-text"
+    context_text = text_container.find("div", class_=class_)
+    return Raiser.check_on_tag(context_text)
+
+
+def parse_paragraphs(content_text: Tag) -> Iterable[str]:
+    return map(lambda a: a.text, content_text.find_all("p"))
+
+
+def parse_images_urls(content_text: Tag) -> Iterable[URL]:
+    return map(lambda a: domain.with_path(a.get("src")), content_text.find_all("img"))
 
 
 async def get_images_by_urls(
@@ -94,8 +123,8 @@ async def get_images_by_urls(
 ) -> Iterable[LoadedImage]:
     tasks = []
     async with asyncio.TaskGroup() as tg:
-        for i in urls:
-            tasks.append(tg.create_task(load_image(session, i)))
+        for url in urls:
+            tasks.append(tg.create_task(load_image(session, url)))
     return map(lambda t: t.result(), tasks)
 
 
@@ -120,12 +149,12 @@ async def save_text(chapter: LoadedChapter) -> None:
 
 async def load_image(session: aiohttp.ClientSession, url: URL) -> LoadedImage:
     async with session.get(url) as r:
-        Raiser.if_bad_response(r)
+        Raiser.check_response(r)
         return LoadedImage(url=url, data=await r.read())
 
 
 async def save_image(image: LoadedImage, preffix: str) -> None:
-    image_file_name = f"{preffix}{image.url.suffix}"
+    image_file_name = f"{preffix}{image.extension}"
     async with aiofiles.open(image_file_name, "wb") as f:
         logger.debug(f"write image {image_file_name}")
         await f.write(image.data)
@@ -152,9 +181,9 @@ def to_chapaters(rows):
 async def run(session: aiohttp.ClientSession):
     logger.debug("run")
     book_url = domain.joinpath("book/77486")
-    soup = await get_soup(session, book_url)
+    main_page_soup = await get_soup(session, book_url)
     logger.debug("getting chapters url")
-    chapter_rows = soup.find_all(class_="chapter_row")
+    chapter_rows = main_page_soup.find_all(class_="chapter_row")
 
     async with asyncio.TaskGroup() as tg:
         for chapter in to_chapaters(chapter_rows):

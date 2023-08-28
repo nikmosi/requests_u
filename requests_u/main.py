@@ -59,6 +59,29 @@ class Raiser:
             raise Exception(msg)
 
 
+@dataclass
+class TextContainer:
+    html_title: Tag
+    paragraphs: Iterable[str]
+    images_urls: Iterable[URL]
+
+    @property
+    def title(self) -> str:
+        return self.html_title.text
+
+    @staticmethod
+    def parse(soup) -> "TextContainer":
+        text_container = parse_text_container(soup)
+        html_title = parse_title(text_container)
+        content_text = parse_context_text(text_container)
+        paragraphs = parse_paragraphs(content_text)
+        images_urls = parse_images_urls(content_text)
+
+        return TextContainer(
+            html_title=html_title, paragraphs=paragraphs, images_urls=images_urls
+        )
+
+
 async def get_soup(session: aiohttp.ClientSession, url: URL) -> BeautifulSoup:
     html = await get_html(session, url)
     return BeautifulSoup(html, "lxml")
@@ -81,15 +104,14 @@ async def load_chapter(
 ) -> LoadedChapter:
     soup = await get_soup(session, chapter.url)
 
-    text_container = parse_text_container(soup)
-    html_title = parse_title(text_container)
-    content_text = parse_context_text(text_container)
-    paragraphs = parse_paragraphs(content_text)
-    images_urls = parse_images_urls(content_text)
-    images = await get_images_by_urls(session, images_urls)
+    text_container = TextContainer.parse(soup)
+    images = await get_images_by_urls(session, text_container.images_urls)
 
     return LoadedChapter(
-        **asdict(chapter), title=html_title.text, paragraphs=paragraphs, images=images
+        **asdict(chapter),
+        title=text_container.title,
+        paragraphs=text_container.paragraphs,
+        images=images,
     )
 
 

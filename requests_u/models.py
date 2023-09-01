@@ -5,6 +5,13 @@ from yarl import URL
 
 
 @dataclass
+class TrimArgs:
+    from_: int | None
+    to: int | None
+    interactive: bool
+
+
+@dataclass
 class Chapter:
     id: int
     name: str

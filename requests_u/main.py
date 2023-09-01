@@ -1,7 +1,7 @@
 import argparse
 import asyncio
 from dataclasses import asdict
-from typing import Iterable
+from typing import Any, Iterable
 
 import aiofiles
 import aiohttp
@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 from helpers import Raiser
 from loguru import logger
-from models import Chapter, LoadedChapter, LoadedImage
+from models import Chapter, LoadedChapter, LoadedImage, TrimArgs
 from TextContainer import TextContainer
 from yarl import URL
 
@@ -68,7 +68,7 @@ async def save_chapter(chapter: LoadedChapter) -> None:
 
 
 async def save_text(chapter: LoadedChapter) -> None:
-    file_name = chapter.base_name
+    file_name = chapter.base_name.encode()[0:200].decode()
     file_name_with_ext = f"{file_name}.txt"
     async with aiofiles.open(file_name_with_ext, "w") as f:
         logger.debug(f"write text {file_name_with_ext}")
@@ -116,12 +116,59 @@ def can_read(row: Tag) -> bool:
     return span is None
 
 
+def chunk(obj: Iterable[Any], chunk_size: int) -> Iterable[Iterable[Any]]:
+    it = obj.__iter__()
+    while True:
+        try:
+            data = []
+            for _ in range(chunk_size):
+                data.append(next(it))
+            yield data
+        except StopIteration:
+            pass
+
+
+def trim(args: TrimArgs, chapters: Iterable[Chapter]) -> Iterable[Chapter]:
+    if args.interactive:
+        return interactive_trim(chapters)
+
+
+def interactive_trim(chapters: Iterable[Chapter]) -> Iterable[Chapter]:
+    pass
+
+
 @logger.catch
 async def run(session: aiohttp.ClientSession):
     global domain
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "url", help="url to book (example: https://tl.rulate.ru/book/xxxxx)", type=URL
+    )
+    parser.add_argument(
+        "-c",
+        "--chunk-size",
+        type=int,
+        default=10,
+    )
+    parser.add_argument(
+        "-f",
+        "--from",
+        help="chapter index from download (included)",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "-t",
+        "--to",
+        help="chapter index to download (included)",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "-i",
+        "--interactive",
+        action="store_true",
+        help="interactive choose bound for download",
     )
     args = parser.parse_args()
     logger.debug("run")
@@ -131,9 +178,12 @@ async def run(session: aiohttp.ClientSession):
     logger.debug("getting chapters url")
     chapter_rows = main_page_soup.find_all(class_="chapter_row")
 
-    async with asyncio.TaskGroup() as tg:
-        for chapter in to_chapaters(chapter_rows):
-            tg.create_task(handle_chapter(session, chapter))
+    chapters = to_chapaters(chapter_rows)
+
+    for chunked in chunk(chapters, args.chunk_size):
+        async with asyncio.TaskGroup() as tg:
+            for chapter in chunked:
+                tg.create_task(handle_chapter(session, chapter))
 
 
 async def main():

@@ -19,5 +19,5 @@ aiofiles = "^23.2.1"
 
 
 [build-system]
-requires = ["poetry-core", "gum"]
+requires = ["poetry-core", "fzf"]
 build-backend = "poetry.core.masonry.api"

@@ -237,7 +237,8 @@ async def run(session: aiohttp.ClientSession):
 
 
 async def main():
-    async with aiohttp.ClientSession() as session:
+    cookies = {"mature": "c3a2ed4b199a1a15f5a5483504c7a75a7030dc4bi%3A1%3B"}
+    async with aiohttp.ClientSession(cookies=cookies) as session:
         await run(session)
 
 

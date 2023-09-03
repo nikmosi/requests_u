@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import subprocess as sb
 from dataclasses import asdict
 from typing import Any, Iterable
 
@@ -29,7 +30,7 @@ async def get_html(session: aiohttp.ClientSession, url: URL) -> str:
 
 
 async def handle_chapter(session: aiohttp.ClientSession, chapter: Chapter) -> None:
-    logger.debug(f"{handle_chapter.__name__} {chapter.base_name}")
+    logger.debug(f"{chapter.base_name}")
     loaded_chapter = await load_chapter(session, chapter)
     await save_chapter(loaded_chapter)
 
@@ -117,24 +118,70 @@ def can_read(row: Tag) -> bool:
 
 
 def chunk(obj: Iterable[Any], chunk_size: int) -> Iterable[Iterable[Any]]:
-    it = obj.__iter__()
-    while True:
-        try:
-            data = []
-            for _ in range(chunk_size):
-                data.append(next(it))
+    data = []
+    for item in obj:
+        data.append(item)
+        if len(data) >= chunk_size:
             yield data
-        except StopIteration:
-            pass
+            data = []
+    if len(data) != 0:
+        yield data
 
 
 def trim(args: TrimArgs, chapters: Iterable[Chapter]) -> Iterable[Chapter]:
     if args.interactive:
-        return interactive_trim(chapters)
+        for item in interactive_trim(chapters):
+            yield item
+    for i, chapter in enumerate(chapters, 1):
+        to_border = args.to is None or i >= args.to
+        from_border = args.from_ is None or i <= args.from_
+        if to_border and from_border:
+            yield chapter
 
 
 def interactive_trim(chapters: Iterable[Chapter]) -> Iterable[Chapter]:
-    pass
+    chapters_list = list(chapters)
+    base_names = list(map(lambda a: a.base_name, chapters_list))
+
+    from_ = fzf_filter(base_names, "From chapter...")
+    if len(from_) == 0:
+        logger.error("get empty from chapter.")
+        exit(1)
+    to = fzf_filter(base_names, "To chapter...")
+    if len(to) == 0:
+        logger.error("get empty to chapter.")
+        exit(1)
+
+    logger.debug(from_)
+    logger.debug(to)
+
+    from_index = base_names.index(from_)
+    to_index = base_names.index(to)
+
+    if from_index > to_index:
+        logger.error(f"{from_index=} more than {to_index=}")
+
+    logger.debug(f"{from_index=}")
+    logger.debug(f"{to_index=}")
+
+    return chapters_list[from_index : to_index + 1]
+
+
+def fzf_filter(data: Iterable[Any], placeholder: str = "Filter...") -> str:
+    printf = sb.Popen(
+        ["printf", "%s\n", *map(str, data)],
+        stdout=sb.PIPE,
+        text=True,
+    )
+    filtered = sb.Popen(
+        ["fzf", "--color=16", f'--prompt="{placeholder}" >'],
+        stdin=printf.stdout,
+        stdout=sb.PIPE,
+        text=True,
+    )
+    out, _ = filtered.communicate()
+    logger.debug(f"{out=}")
+    return out.rstrip("\n")
 
 
 @logger.catch
@@ -153,7 +200,8 @@ async def run(session: aiohttp.ClientSession):
     parser.add_argument(
         "-f",
         "--from",
-        help="chapter index from download (included)",
+        dest="from_",
+        help="chapter index from download (included) {start with 1}",
         type=int,
         default=None,
     )
@@ -171,6 +219,7 @@ async def run(session: aiohttp.ClientSession):
         help="interactive choose bound for download",
     )
     args = parser.parse_args()
+    trim_args = TrimArgs(from_=args.from_, to=args.to, interactive=args.interactive)
     logger.debug("run")
     book_url = args.url
     domain = book_url.with_path("")
@@ -179,8 +228,9 @@ async def run(session: aiohttp.ClientSession):
     chapter_rows = main_page_soup.find_all(class_="chapter_row")
 
     chapters = to_chapaters(chapter_rows)
+    trimmed_chapters = trim(trim_args, chapters)
 
-    for chunked in chunk(chapters, args.chunk_size):
+    for chunked in chunk(trimmed_chapters, args.chunk_size):
         async with asyncio.TaskGroup() as tg:
             for chapter in chunked:
                 tg.create_task(handle_chapter(session, chapter))

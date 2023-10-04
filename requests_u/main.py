@@ -218,6 +218,17 @@ async def run(session: aiohttp.ClientSession):
         action="store_true",
         help="interactive choose bound for download",
     )
+    parser.add_argument(
+        "-w",
+        "--working-directory",
+        help="interactive choose bound for download",
+    )
+    parser.add_argument(
+        "-a",
+        "--auto-create-working-directory",
+        action="store_true",
+        help="interactive choose bound for download",
+    )
     args = parser.parse_args()
     trim_args = TrimArgs(from_=args.from_, to=args.to, interactive=args.interactive)
     logger.debug("run")

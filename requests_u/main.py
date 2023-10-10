@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import os
 import subprocess as sb
 from dataclasses import asdict
 from typing import Any, Iterable
@@ -225,6 +226,7 @@ async def run(session: aiohttp.ClientSession):
         "--auto-create-working-directory",
         action="store_true",
         help="interactive choose bound for download",
+        default=".",
     )
     parser.add_argument(
         "-s",
@@ -234,6 +236,8 @@ async def run(session: aiohttp.ClientSession):
         default="EbookSaver",
     )
     args = parser.parse_args()
+    working_directory = args.working_directory
+    os.chdir(working_directory)
     trim_args = TrimArgs(from_=args.from_, to=args.to, interactive=args.interactive)
     logger.debug("run")
     book_url = args.url

@@ -4,14 +4,13 @@ import subprocess as sb
 from dataclasses import asdict
 from typing import Any, Iterable
 
-import aiofiles
 import aiohttp
 import fake_useragent as fa
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from helpers import Raiser
 from loguru import logger
-from models import Chapter, LoadedChapter, LoadedImage, TrimArgs
+from models import Chapter, Context, LoadedChapter, LoadedImage, Saver, TrimArgs
 from TextContainer import TextContainer
 from yarl import URL
 
@@ -29,10 +28,12 @@ async def get_html(session: aiohttp.ClientSession, url: URL) -> str:
         return await r.text()
 
 
-async def handle_chapter(session: aiohttp.ClientSession, chapter: Chapter) -> None:
+async def handle_chapter(
+    session: aiohttp.ClientSession, chapter: Chapter, context: Context
+) -> None:
     logger.debug(f"{chapter.base_name}")
     loaded_chapter = await load_chapter(session, chapter)
-    await save_chapter(loaded_chapter)
+    await context.saver.save_chapter(loaded_chapter)
 
 
 async def load_chapter(
@@ -61,36 +62,10 @@ async def load_images_by_urls(
     return map(lambda t: t.result(), tasks)
 
 
-async def save_chapter(chapter: LoadedChapter) -> None:
-    async with asyncio.TaskGroup() as tg:
-        tg.create_task(save_text(chapter))
-        for index, image in enumerate(chapter.images, 1):
-            tg.create_task(save_image(image, f"{chapter.base_name}_{index}"))
-
-
-async def save_text(chapter: LoadedChapter) -> None:
-    file_name = chapter.base_name.encode()[0:200].decode()
-    file_name_with_ext = f"{file_name}.txt"
-    async with aiofiles.open(file_name_with_ext, "w") as f:
-        logger.debug(f"write text {file_name_with_ext}")
-        await f.write(chapter.title)
-        await f.write("\n\n")
-        for i in chapter.paragraphs:
-            await f.write(i)
-            await f.write("\n")
-
-
 async def load_image(session: aiohttp.ClientSession, url: URL) -> LoadedImage:
     async with session.get(url) as r:
         Raiser.check_response(r)
         return LoadedImage(url=url, data=await r.read())
-
-
-async def save_image(image: LoadedImage, preffix: str) -> None:
-    image_file_name = f"{preffix}{image.extension}"
-    async with aiofiles.open(image_file_name, "wb") as f:
-        logger.debug(f"write image {image_file_name}")
-        await f.write(image.data)
 
 
 def get_headers() -> dict:
@@ -184,6 +159,28 @@ def fzf_filter(data: Iterable[Any], placeholder: str = "Filter...") -> str:
     return out.rstrip("\n")
 
 
+def get_saver(saver_name: str):
+    for saver in inheritors(Saver):
+        if saver.__name__ == saver_name:
+            return saver
+
+    msg = f"can't find saver with name {saver_name=}"
+    logger.error(msg)
+    raise Exception(msg)
+
+
+def inheritors(klass):
+    subclasses = set()
+    work = [klass]
+    while work:
+        parent = work.pop()
+        for child in parent.__subclasses__():
+            if child not in subclasses:
+                subclasses.add(child)
+                work.append(child)
+    return subclasses
+
+
 @logger.catch
 async def run(session: aiohttp.ClientSession):
     global domain
@@ -195,7 +192,7 @@ async def run(session: aiohttp.ClientSession):
         "-c",
         "--chunk-size",
         type=int,
-        default=10,
+        default=40,
     )
     parser.add_argument(
         "-f",
@@ -229,6 +226,13 @@ async def run(session: aiohttp.ClientSession):
         action="store_true",
         help="interactive choose bound for download",
     )
+    parser.add_argument(
+        "-s",
+        "--saver",
+        help="select saver (default EbookSaver)",
+        choices=[i.__name__ for i in inheritors(Saver)],
+        default="EbookSaver",
+    )
     args = parser.parse_args()
     trim_args = TrimArgs(from_=args.from_, to=args.to, interactive=args.interactive)
     logger.debug("run")
@@ -237,14 +241,23 @@ async def run(session: aiohttp.ClientSession):
     main_page_soup = await get_soup(session, book_url)
     logger.debug("getting chapters url")
     chapter_rows = main_page_soup.find_all(class_="chapter_row")
+    title = main_page_soup.find(class_="book-header").findNext("h1").text.strip()
+    logger.debug(f"get {title=}")
+    if len(title) == 0:
+        msg = "can't get title"
+        logger.error(msg)
+        exit(msg)
 
     chapters = to_chapaters(chapter_rows)
     trimmed_chapters = trim(trim_args, chapters)
 
-    for chunked in chunk(trimmed_chapters, args.chunk_size):
-        async with asyncio.TaskGroup() as tg:
-            for chapter in chunked:
-                tg.create_task(handle_chapter(session, chapter))
+    saver = get_saver(args.saver)
+    with saver(title, "ru") as s:
+        context = Context(saver=s)
+        for chunked in chunk(trimmed_chapters, args.chunk_size):
+            async with asyncio.TaskGroup() as tg:
+                for chapter in chunked:
+                    tg.create_task(handle_chapter(session, chapter, context))
 
 
 async def main():

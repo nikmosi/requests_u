@@ -237,6 +237,12 @@ async def run(session: aiohttp.ClientSession):
     )
     args = parser.parse_args()
     working_directory = args.working_directory
+    if not os.path.exists(working_directory):
+        os.mkdir(working_directory)
+    if not os.path.isdir(working_directory):
+        msg = f"{working_directory=} isn't directory"
+        logger.error(msg)
+        raise Exception(msg)
     os.chdir(working_directory)
     trim_args = TrimArgs(from_=args.from_, to=args.to, interactive=args.interactive)
     logger.debug("run")

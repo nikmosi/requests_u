@@ -101,8 +101,7 @@ class ClassicSaver(Saver):
 class EbookSaver(Saver):
     _is_entered: bool = False
     _book: epub.EpubBook
-    _items: list[epub.EpubItem]
-    _chapters: list[epub.EpubHtml]
+    _items: list[tuple[int, epub.EpubItem]]
 
     def __init__(self, title: str, language: str, author="nikmosi"):
         logger.debug(f"init {type(self).__name__} saver")
@@ -130,7 +129,7 @@ class EbookSaver(Saver):
             raise Exception(msg)
         html = epub.EpubHtml(
             title=loaded_chapter.base_name,
-            file_name=f"chapters/{loaded_chapter.base_name}.html",
+            file_name=f"chapters/{loaded_chapter.base_name}.xhtml",
             lang=self.language,
         )
         paths = self.add_images_to_book(
@@ -138,14 +137,15 @@ class EbookSaver(Saver):
         )
         html.set_content(
             "<html><body><h1>{}</h1>{}{}</body></html>".format(
-                loaded_chapter.base_name,
+                loaded_chapter.title,
                 self.get_paragraph_html(loaded_chapter),
                 self.get_images_html(paths),
             )
         )
 
-        self._items.append(html)
-        self._chapters.append(html)
+        obj = (loaded_chapter.id, html)
+        self._items.append(obj)
+        self._chapters.append(obj)
 
     def get_paragraph_html(self, loaded_chapter: LoadedChapter):
         return "".join(f"<p>{i.strip()}</p>" for i in loaded_chapter.paragraphs)
@@ -180,8 +180,9 @@ class EbookSaver(Saver):
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
         logger.debug(f"exit {type(self).__name__} saver")
+        self._items.sort(key=lambda a: a[0])
         for i in self._items:
-            self._book.add_item(i)
+            self._book.add_item(i[1])
         style = "body { font-family: Roboto, Times, Times New Roman, serif; }"
         nav_css = epub.EpubItem(
             uid="style_nav",
@@ -191,9 +192,9 @@ class EbookSaver(Saver):
         )
         self._book.add_item(nav_css)
 
-        self._book.toc = (epub.Section("Chapters"), *self._chapters)
+        self._book.toc = (epub.Section("Chapters"), *[i[1] for i in self._items])
 
-        self._book.spine = ["nav", *self._chapters]
+        self._book.spine = ["nav", *[i[1] for i in self._items]]
 
         self._book.add_item(epub.EpubNcx())
         self._book.add_item(epub.EpubNav())

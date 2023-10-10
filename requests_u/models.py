@@ -136,7 +136,7 @@ class EbookSaver(Saver):
             chapter_id=loaded_chapter.id, images=loaded_chapter.images
         )
         html.set_content(
-            "<html><body><h1>{}</h1>{}{}</body></html>".format(
+            "<html><body><p>{}</p><br/>{}{}</html>".format(
                 loaded_chapter.title,
                 self.get_paragraph_html(loaded_chapter),
                 self.get_images_html(paths),

@@ -11,7 +11,15 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 from helpers import Raiser
 from loguru import logger
-from models import Chapter, Context, LoadedChapter, LoadedImage, Saver, TrimArgs
+from models import (
+    Chapter,
+    Context,
+    LoadedChapter,
+    LoadedImage,
+    Saver,
+    SaverContext,
+    TrimArgs,
+)
 from TextContainer import TextContainer
 from yarl import URL
 
@@ -182,6 +190,23 @@ def inheritors(klass):
     return subclasses
 
 
+async def get_covers(
+    session: aiohttp.ClientSession, main_page_soup: Tag, domain: URL
+) -> list[LoadedImage]:
+    logger.debug("loading covers")
+    container = main_page_soup.find(class_="images")
+    if not isinstance(container, Tag):
+        logger.error("can't get cover images")
+        return []
+    image_urls = TextContainer.parse_images_urls(container, domain)
+
+    images = []
+    for i in image_urls:
+        images.append(await load_image(session, i))
+    logger.debug(f"load {len(images)} covers")
+    return images
+
+
 @logger.catch
 async def run(session: aiohttp.ClientSession):
     global domain
@@ -237,13 +262,14 @@ async def run(session: aiohttp.ClientSession):
     )
     args = parser.parse_args()
     working_directory = args.working_directory
-    if not os.path.exists(working_directory):
-        os.mkdir(working_directory)
-    if not os.path.isdir(working_directory):
-        msg = f"{working_directory=} isn't directory"
-        logger.error(msg)
-        raise Exception(msg)
-    os.chdir(working_directory)
+    if working_directory is not None:
+        if not os.path.exists(working_directory):
+            os.mkdir(working_directory)
+        if not os.path.isdir(working_directory):
+            msg = f"{working_directory=} isn't directory"
+            logger.error(msg)
+            raise Exception(msg)
+        os.chdir(working_directory)
     trim_args = TrimArgs(from_=args.from_, to=args.to, interactive=args.interactive)
     logger.debug("run")
     book_url = args.url
@@ -261,8 +287,12 @@ async def run(session: aiohttp.ClientSession):
     chapters = to_chapaters(chapter_rows)
     trimmed_chapters = trim(trim_args, chapters)
 
+    covers = await get_covers(session, main_page_soup, domain)
+
+    saver_context = SaverContext(title=title, language="ru", covers=covers)
+
     saver = get_saver(args.saver)
-    with saver(title, "ru") as s:
+    with saver(saver_context) as s:
         context = Context(saver=s)
         for chunked in chunk(trimmed_chapters, args.chunk_size):
             async with asyncio.TaskGroup() as tg:

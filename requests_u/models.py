@@ -2,6 +2,7 @@ import asyncio
 import mimetypes as mt
 from dataclasses import dataclass
 from pathlib import Path
+from random import choice
 from typing import Iterable
 
 import aiofiles
@@ -50,9 +51,17 @@ class LoadedChapter(Chapter):
     title: str
 
 
+@dataclass
+class SaverContext:
+    title: str
+    language: str
+    covers: list[LoadedImage]
+    author: str = "nikmosi"
+
+
 class Saver:
-    def __init__(self, title: str, language: str, author="nikmosi"):
-        pass
+    def __init__(self, context: SaverContext):
+        self.context = context
 
     def __enter__(self) -> "Saver":
         return self
@@ -70,8 +79,9 @@ class Context:
 
 
 class ClassicSaver(Saver):
-    def __init__(self, title: str, language: str, author="nikmosi") -> None:
+    def __init__(self, context: SaverContext) -> None:
         logger.debug(f"init {type(self).__name__} saver")
+        super().__init__(context)
 
     @override
     async def save_chapter(self, chapter: LoadedChapter) -> None:
@@ -103,11 +113,9 @@ class EbookSaver(Saver):
     _book: epub.EpubBook
     _items: list[tuple[int, epub.EpubItem]]
 
-    def __init__(self, title: str, language: str, author="nikmosi"):
+    def __init__(self, context: SaverContext):
         logger.debug(f"init {type(self).__name__} saver")
-        self.title = title
-        self.language = language
-        self.author = author
+        super().__init__(context)
         self._items = []
         self._chapters = []
 
@@ -116,10 +124,23 @@ class EbookSaver(Saver):
         self._is_entered = True
         self._book = epub.EpubBook()
 
-        self._book.set_title(self.title)
-        self._book.set_language(self.language)
+        self._book.set_title(self.context.title)
+        self._book.set_language(self.context.language)
 
-        self._book.add_author(self.author)
+        self._book.add_author(self.context.author)
+
+        if len(self.context.covers) > 0:
+            covers = self.add_cover_collection()
+            self._items.append((-1, covers))
+
+            logger.debug("set epub cover")
+            rnd_cover = choice(self.context.covers)
+            name = f"{rnd_cover.name}{rnd_cover.extension}"
+            logger.debug(f"take {name}")
+            content = rnd_cover.data
+
+            self._book.set_cover(file_name=name, content=content)
+
         return super().__enter__()
 
     async def save_chapter(self, loaded_chapter: LoadedChapter) -> None:
@@ -130,7 +151,7 @@ class EbookSaver(Saver):
         html = epub.EpubHtml(
             title=loaded_chapter.base_name,
             file_name=f"chapters/{loaded_chapter.base_name}.xhtml",
-            lang=self.language,
+            lang=self.context.language,
         )
         paths = self.add_images_to_book(
             chapter_id=loaded_chapter.id, images=loaded_chapter.images
@@ -150,18 +171,18 @@ class EbookSaver(Saver):
     def get_paragraph_html(self, loaded_chapter: LoadedChapter):
         return "".join(f"<p>{i.strip()}</p>" for i in loaded_chapter.paragraphs)
 
-    def get_images_html(self, paths: Iterable[Path]):
+    def get_images_html(self, paths: Iterable[Path], prefix: str = "<h1>Images</h1>"):
         html = "".join(
             f"<img src=\"{Path('..') / i}\" alt=\"dead image----\" />" for i in paths
         )
 
-        return "<h1>Images</h1>" + html if len(html) > 0 else ""
+        return prefix + html if len(html) > 0 else ""
 
     def add_images_to_book(
         self, chapter_id: int, images: Iterable[LoadedImage]
     ) -> Iterable[Path]:
-        for image in images:
-            path = Path(f"images/{chapter_id}. {image.name}")
+        for num, image in enumerate(images):
+            path = Path(f"images/{chapter_id}. {num} {image.name}")
             file_name = str(path)
             ei = epub.EpubImage()
             ei.file_name = file_name
@@ -174,9 +195,24 @@ class EbookSaver(Saver):
     def get_file_name(self):
         return "".join(
             x
-            for x in self.title.replace(" ", "_").replace("/", ":")
+            for x in self.context.title.replace(" ", "_").replace("/", ":")
             if x.isalnum() or x in ["_", "-", ":"]
         )
+
+    def add_cover_collection(self):
+        covers = self.context.covers
+        paths = self.add_images_to_book(-1, covers)
+        image_htmls = self.get_images_html(paths, prefix="")
+
+        page = epub.EpubHtml(
+            title="Covers",
+            file_name="covers.xhtml",
+            lang=self.context.language,
+        )
+
+        page.set_content("<html><body><br/>{}</html>".format(image_htmls))
+
+        return page
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
         logger.debug(f"exit {type(self).__name__} saver")

@@ -59,3 +59,7 @@ class TextContainer:
                 yield url_src
             else:
                 yield domain.with_path(src)
+
+    @staticmethod
+    def parse_images_urls(content_text: Tag, domain: URL) -> Iterable[URL]:
+        return TextContainer._parse_images_urls(content_text, domain)

@@ -247,13 +247,6 @@ async def run(session: aiohttp.ClientSession):
         help="interactive choose bound for download",
     )
     parser.add_argument(
-        "-a",
-        "--auto-create-working-directory",
-        action="store_true",
-        help="interactive choose bound for download",
-        default=".",
-    )
-    parser.add_argument(
         "-s",
         "--saver",
         help="select saver (default EbookSaver)",

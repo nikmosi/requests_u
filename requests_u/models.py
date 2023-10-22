@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import mimetypes as mt
 from dataclasses import dataclass
@@ -6,10 +7,68 @@ from random import choice
 from typing import Iterable
 
 import aiofiles
+import aiohttp
+from bs4.element import Tag
 from ebooklib import epub
+from helpers import Raiser, get_soup, inheritors
 from loguru import logger
+from TextContainer import TextContainer
 from typing_extensions import override
 from yarl import URL
+
+
+@dataclass
+class MainPage:
+    chapters: Iterable["Chapter"]
+    title: str
+    covers: list["LoadedImage"]
+
+    @staticmethod
+    async def get(session: aiohttp.ClientSession, book_url: URL) -> "MainPage":
+        main_page_soup = await get_soup(session, book_url)
+        logger.debug("getting chapters url")
+        chapter_rows = main_page_soup.find_all(class_="chapter_row")
+        title = main_page_soup.find(class_="book-header").findNext("h1").text.strip()
+        logger.debug(f"get {title=}")
+        if len(title) == 0:
+            msg = "can't get title"
+            logger.error(msg)
+            exit(msg)
+
+        covers = await MainPage.get_covers(session, main_page_soup, book_url)
+
+        return MainPage(
+            chapters=MainPage.to_chapaters(chapter_rows, book_url),
+            title=title,
+            covers=covers,
+        )
+
+    @staticmethod
+    async def get_covers(
+        session: aiohttp.ClientSession, main_page_soup: Tag, domain: URL
+    ) -> list["LoadedImage"]:
+        logger.debug("loading covers")
+        container = main_page_soup.find(class_="images")
+        if not isinstance(container, Tag):
+            logger.error("can't get cover images")
+            return []
+        image_urls = TextContainer.parse_images_urls(container, domain)
+
+        images = []
+        for i in image_urls:
+            images.append(await LoadedImage.load_image(session, i))
+        logger.debug(f"load {len(images)} covers")
+        return images
+
+    @staticmethod
+    def to_chapaters(rows: Iterable[Tag], domain: URL):
+        for index, row in enumerate(rows, 1):
+            if Chapter.can_read(row):
+                a = Raiser.check_on_tag(row.find_next("a"))
+                href = Raiser.check_on_str(a.get("href"))
+                url = domain.with_path(href)
+                name = a.text
+                yield Chapter(id=index, name=name, url=url)
 
 
 @dataclass
@@ -29,6 +88,11 @@ class Chapter:
     def base_name(self) -> str:
         return f"{self.id}. {self.name}"
 
+    @staticmethod
+    def can_read(row: Tag) -> bool:
+        span = row.find("span", class_="disabled")
+        return span is None
+
 
 @dataclass
 class LoadedImage:
@@ -42,6 +106,12 @@ class LoadedImage:
     @property
     def extension(self) -> str:
         return self.url.suffix
+
+    @staticmethod
+    async def load_image(session: aiohttp.ClientSession, url: URL) -> "LoadedImage":
+        async with session.get(url) as r:
+            Raiser.check_response(r)
+            return LoadedImage(url=url, data=await r.read())
 
 
 @dataclass
@@ -69,6 +139,16 @@ class Saver:
     def __exit__(self, exception_type, exception_value, exception_traceback):
         pass
 
+    @staticmethod
+    def get_saver_by_name(saver_name: str) -> type:
+        for saver in inheritors(Saver):
+            if saver.__name__ == saver_name:
+                return saver
+
+        msg = f"can't find saver with name {saver_name=}"
+        logger.error(msg)
+        raise Exception(msg)
+
     async def save_chapter(self, loaded_chapter: LoadedChapter) -> None:
         raise NotImplementedError()
 
@@ -76,6 +156,7 @@ class Saver:
 @dataclass
 class Context:
     saver: Saver
+    domain: URL
 
 
 class ClassicSaver(Saver):
@@ -237,3 +318,70 @@ class EbookSaver(Saver):
 
         file_name = self.get_file_name()
         epub.write_epub(f"{file_name}.epub", self._book)
+
+
+@dataclass
+class ConsoleArgumets:
+    working_directory: str
+    chunk_size: int
+    url: URL
+    trim_args: TrimArgs
+    saver: type
+
+    @staticmethod
+    def get_arguments() -> "ConsoleArgumets":
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            "url",
+            help="url to book (example: https://tl.rulate.ru/book/xxxxx)",
+            type=URL,
+        )
+        parser.add_argument(
+            "-c",
+            "--chunk-size",
+            type=int,
+            default=40,
+        )
+        parser.add_argument(
+            "-f",
+            "--from",
+            dest="from_",
+            help="chapter index from download (included) {start with 1}",
+            type=int,
+            default=None,
+        )
+        parser.add_argument(
+            "-t",
+            "--to",
+            help="chapter index to download (included)",
+            type=int,
+            default=None,
+        )
+        parser.add_argument(
+            "-i",
+            "--interactive",
+            action="store_true",
+            help="interactive choose bound for download",
+        )
+        parser.add_argument(
+            "-w",
+            "--working-directory",
+            help="interactive choose bound for download",
+        )
+        parser.add_argument(
+            "-s",
+            "--saver",
+            help="select saver (default EbookSaver)",
+            choices=[i.__name__ for i in inheritors(Saver)],
+            default="EbookSaver",
+        )
+        args = parser.parse_args()
+        trim_args = TrimArgs(from_=args.from_, to=args.to, interactive=args.interactive)
+
+        return ConsoleArgumets(
+            chunk_size=args.chunk_size,
+            url=args.url,
+            saver=Saver.get_saver_by_name(args.saver),
+            working_directory=args.working_directory,
+            trim_args=trim_args,
+        )

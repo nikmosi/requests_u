@@ -91,9 +91,8 @@ class Chapter:
     @staticmethod
     def can_read(row: Tag) -> bool:
         span = row.find("span", class_="disabled")
-        status = row.find(class_="t").find_next_sibling("td")
-        print(status)
-        return span is None and status.text == "готово"
+        btn = row.find("a", class_="btn")
+        return span is None and btn is not None
 
 
 @dataclass

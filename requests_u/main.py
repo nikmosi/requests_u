@@ -51,7 +51,7 @@ async def load_images_by_urls(
     async with asyncio.TaskGroup() as tg:
         for url in urls:
             tasks.append(tg.create_task(LoadedImage.load_image(session, url)))
-    return map(lambda t: t.result(), tasks)
+    return filter(lambda a: a is not None, map(lambda t: t.result(), tasks))
 
 
 def chunk(obj: Iterable[Any], chunk_size: int) -> Iterable[Iterable[Any]]:

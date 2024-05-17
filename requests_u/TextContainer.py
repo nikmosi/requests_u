@@ -8,7 +8,7 @@ from yarl import URL
 
 
 @dataclass
-class TextContainer:
+class TlRulateTextContainer:
     html_title: Tag
     paragraphs: Iterable[str]
     images_urls: Iterable[URL]
@@ -18,14 +18,14 @@ class TextContainer:
         return self.html_title.text
 
     @staticmethod
-    def parse(soup: BeautifulSoup, domain: URL) -> "TextContainer":
-        text_container = TextContainer._parse_text_container(soup)
-        html_title = TextContainer._parse_title(text_container)
-        content_text = TextContainer._parse_context_text(text_container)
-        paragraphs = TextContainer._parse_paragraphs(content_text)
-        images_urls = TextContainer._parse_images_urls(content_text, domain)
+    def parse(soup: BeautifulSoup, domain: URL) -> "TlRulateTextContainer":
+        text_container = TlRulateTextContainer._parse_text_container(soup)
+        html_title = TlRulateTextContainer._parse_title(text_container)
+        content_text = TlRulateTextContainer._parse_context_text(text_container)
+        paragraphs = TlRulateTextContainer._parse_paragraphs(content_text)
+        images_urls = TlRulateTextContainer._parse_images_urls(content_text, domain)
 
-        return TextContainer(
+        return TlRulateTextContainer(
             html_title=html_title, paragraphs=paragraphs, images_urls=images_urls
         )
 
@@ -62,4 +62,4 @@ class TextContainer:
 
     @staticmethod
     def parse_images_urls(content_text: Tag, domain: URL) -> Iterable[URL]:
-        return TextContainer._parse_images_urls(content_text, domain)
+        return TlRulateTextContainer._parse_images_urls(content_text, domain)

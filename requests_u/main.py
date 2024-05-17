@@ -1,68 +1,15 @@
 import asyncio
 import subprocess as sb
-from dataclasses import asdict
+from itertools import batched
 from typing import Any, Iterable
 
 import aiohttp
-from helpers import change_working_directory, get_soup
+from helpers import change_working_directory
+from loader_helper import get_loader_for
 from loguru import logger
-from models import (
-    Chapter,
-    ConsoleArgumets,
-    Context,
-    LoadedChapter,
-    LoadedImage,
-    MainPage,
-    SaverContext,
-    TrimArgs,
-)
-from TextContainer import TextContainer
-from yarl import URL
+from models import ConsoleArgumets, SaverContext, TrimArgs
 
-
-async def handle_chapter(
-    session: aiohttp.ClientSession, chapter: Chapter, context: Context
-) -> None:
-    logger.debug(f"{chapter.base_name}")
-    loaded_chapter = await load_chapter(session, chapter, context.domain)
-    await context.saver.save_chapter(loaded_chapter)
-
-
-async def load_chapter(
-    session: aiohttp.ClientSession, chapter: Chapter, domain: URL
-) -> LoadedChapter:
-    soup = await get_soup(session, chapter.url)
-
-    text_container = TextContainer.parse(soup, domain)
-    images = await load_images_by_urls(session, text_container.images_urls)
-
-    return LoadedChapter(
-        **asdict(chapter),
-        title=text_container.title,
-        paragraphs=text_container.paragraphs,
-        images=images,
-    )
-
-
-async def load_images_by_urls(
-    session: aiohttp.ClientSession, urls: Iterable[URL]
-) -> Iterable[LoadedImage]:
-    tasks = []
-    async with asyncio.TaskGroup() as tg:
-        for url in urls:
-            tasks.append(tg.create_task(LoadedImage.load_image(session, url)))
-    return filter(lambda a: a is not None, map(lambda t: t.result(), tasks))
-
-
-def chunk(obj: Iterable[Any], chunk_size: int) -> Iterable[Iterable[Any]]:
-    data = []
-    for item in obj:
-        data.append(item)
-        if len(data) >= chunk_size:
-            yield data
-            data = []
-    if len(data) != 0:
-        yield data
+from requests_u.MainPage.models import Chapter
 
 
 def trim(args: TrimArgs, chapters: Iterable[Chapter]) -> Iterable[Chapter]:
@@ -122,32 +69,29 @@ def fzf_filter(data: Iterable[Any], placeholder: str = "Filter...") -> str:
 
 
 @logger.catch
-async def run(session: aiohttp.ClientSession):
-    logger.debug("run")
-    args = ConsoleArgumets.get_arguments()
-    book_url = args.url
-    main_page = await MainPage.get(session, book_url)
-    domain = book_url.with_path("")
-
-    change_working_directory(args.working_directory)
+async def run(session: aiohttp.ClientSession, args):
+    loader = get_loader_for(args.url, session)
+    main_page = await loader.get_main_page()
     trimmed_chapters = trim(args.trim_args, main_page.chapters)
-
     saver_context = SaverContext(
         title=main_page.title, language="ru", covers=main_page.covers
     )
 
     with args.saver(saver_context) as s:
-        context = Context(saver=s, domain=domain)
-        for chunked in chunk(trimmed_chapters, args.chunk_size):
+        for chunked in batched(trimmed_chapters, n=args.chunk_size):
             async with asyncio.TaskGroup() as tg:
                 for chapter in chunked:
-                    tg.create_task(handle_chapter(session, chapter, context))
+                    tg.create_task(loader.handle_chapter(chapter, s))
 
 
 async def main():
+    logger.debug("run")
+    args = ConsoleArgumets.get_arguments()
+    change_working_directory(args.working_directory)
     cookies = {"mature": "c3a2ed4b199a1a15f5a5483504c7a75a7030dc4bi%3A1%3B"}
     async with aiohttp.ClientSession(cookies=cookies) as session:
-        await run(session)
+        await run(session, args)
+    logger.info("done")
 
 
 if __name__ == "__main__":

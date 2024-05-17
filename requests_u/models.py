@@ -1,74 +1,19 @@
 import argparse
 import asyncio
 import mimetypes as mt
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from random import choice
-from typing import Iterable, Union
+from typing import Iterable
 
 import aiofiles
-import aiohttp
-from bs4.element import Tag
 from ebooklib import epub
-from helpers import Raiser, get_soup, inheritors
+from helpers import inheritors
 from loguru import logger
-from TextContainer import TextContainer
-from typing_extensions import override
 from yarl import URL
 
-
-@dataclass
-class MainPage:
-    chapters: Iterable["Chapter"]
-    title: str
-    covers: list["LoadedImage"]
-
-    @staticmethod
-    async def get(session: aiohttp.ClientSession, book_url: URL) -> "MainPage":
-        main_page_soup = await get_soup(session, book_url)
-        logger.debug("getting chapters url")
-        chapter_rows = main_page_soup.find_all(class_="chapter_row")
-        title = main_page_soup.find(class_="book-header").findNext("h1").text.strip()
-        logger.debug(f"get {title=}")
-        if len(title) == 0:
-            msg = "can't get title"
-            logger.error(msg)
-            exit(msg)
-
-        covers = await MainPage.get_covers(session, main_page_soup, book_url)
-
-        return MainPage(
-            chapters=MainPage.to_chapaters(chapter_rows, book_url),
-            title=title,
-            covers=covers,
-        )
-
-    @staticmethod
-    async def get_covers(
-        session: aiohttp.ClientSession, main_page_soup: Tag, domain: URL
-    ) -> list["LoadedImage"]:
-        logger.debug("loading covers")
-        container = main_page_soup.find(class_="images")
-        if not isinstance(container, Tag):
-            logger.error("can't get cover images")
-            return []
-        image_urls = TextContainer.parse_images_urls(container, domain)
-
-        images = []
-        for i in image_urls:
-            images.append(await LoadedImage.load_image(session, i))
-        logger.debug(f"load {len(images)} covers")
-        return images
-
-    @staticmethod
-    def to_chapaters(rows: Iterable[Tag], domain: URL):
-        for index, row in enumerate(rows, 1):
-            if Chapter.can_read(row):
-                a = Raiser.check_on_tag(row.find_next("a"))
-                href = Raiser.check_on_str(a.get("href"))
-                url = domain.with_path(href)
-                name = a.text
-                yield Chapter(id=index, name=name, url=url)
+from requests_u.MainPage.LoadedModels import LoadedChapter, LoadedImage
 
 
 @dataclass
@@ -79,71 +24,6 @@ class TrimArgs:
 
 
 @dataclass
-class Chapter:
-    id: int
-    name: str
-    url: URL
-
-    @property
-    def base_name(self) -> str:
-        return f"{self.id}. {self.name}"
-
-    @staticmethod
-    def can_read(row: Tag) -> bool:
-        span = row.find("span", class_="disabled")
-        btn = row.find("a", class_="btn")
-        return span is None and btn is not None
-
-
-@dataclass
-class LoadedImage:
-    url: URL
-    data: bytes
-
-    @property
-    def name(self) -> str:
-        return self.url.name
-
-    @property
-    def extension(self) -> str:
-        return self.url.suffix
-
-    headers = {
-        "accept-encoding": "gzip",
-        "accept-language": "en-US,en;q=0.9",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        + " (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36",
-        "x-kite-version": "1.2.1",
-        "accept": "application/json, text/plain, */*",
-        "referer": "https://kite.zerodha.com/orders",
-        "authority": "kite.zerodha.com",
-        "cookie": "__cfduid=db8fb54c76c53442fb672dee32ed58aeb1521962031; "
-        + " _ga=GA1.2.1516103745.1522000590; _gid=GA1.2.581693731.1522462921; "
-        + " kfsession=CfawFIZq2T6SghlCd8FZegqFjNIKCYuO; "
-        + " public_token=7FyfBbbxhiRRUso3425TViK2VmVszMCK; user_id=XE4670",
-        "x-csrftoken": "7FyfBbbxhiRRUso3425TViK2VmVszMCK",
-    }
-
-    @staticmethod
-    async def load_image(
-        session: aiohttp.ClientSession, url: URL
-    ) -> Union["LoadedImage", None]:
-        async with session.get(url, headers=LoadedImage.headers) as r:
-            try:
-                Raiser.check_response(r)
-            except Exception:
-                return None
-            return LoadedImage(url=url, data=await r.read())
-
-
-@dataclass
-class LoadedChapter(Chapter):
-    paragraphs: Iterable[str]
-    images: Iterable[LoadedImage]
-    title: str
-
-
-@dataclass
 class SaverContext:
     title: str
     language: str
@@ -151,7 +31,7 @@ class SaverContext:
     author: str = "nikmosi"
 
 
-class Saver:
+class Saver(ABC):
     def __init__(self, context: SaverContext):
         self.context = context
 
@@ -171,6 +51,7 @@ class Saver:
         logger.error(msg)
         raise Exception(msg)
 
+    @abstractmethod
     async def save_chapter(self, loaded_chapter: LoadedChapter) -> None:
         raise NotImplementedError()
 
@@ -186,8 +67,7 @@ class ClassicSaver(Saver):
         logger.debug(f"init {type(self).__name__} saver")
         super().__init__(context)
 
-    @override
-    async def save_chapter(self, chapter: LoadedChapter) -> None:
+    async def save_chapter(self, chapter: LoadedChapter, *args, **kwargs) -> None:
         async with asyncio.TaskGroup() as tg:
             tg.create_task(self.save_text(chapter))
             for index, image in enumerate(chapter.images, 1):
@@ -327,11 +207,13 @@ class EbookSaver(Saver):
             uid="style_nav",
             file_name="style/nav.css",
             media_type="text/css",
-            content=style,
+            content=style,  # pyright: ignore
         )
         self._book.add_item(nav_css)
 
-        self._book.toc = (epub.Section("Chapters"), *[i[1] for i in self._items])
+        setattr(
+            self._book, "toc", (epub.Section("Chapters"), *[i[1] for i in self._items])
+        )
 
         self._book.spine = ["nav", *[i[1] for i in self._items]]
 

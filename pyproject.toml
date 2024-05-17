@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "requests_u"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 lxml = "^4.9.3"
 fake-useragent = "^1.2.1"
 beautifulsoup4 = "^4.12.2"

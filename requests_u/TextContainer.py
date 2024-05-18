@@ -1,3 +1,4 @@
+import operator
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -48,7 +49,7 @@ class TlRulateTextContainer:
 
     @staticmethod
     def _parse_paragraphs(content_text: Tag) -> Iterable[str]:
-        return map(lambda a: a.text, content_text.find_all("p"))
+        return map(operator.attrgetter("text"), content_text.find_all("p"))
 
     @staticmethod
     def _parse_images_urls(content_text: Tag, domain: URL) -> Iterable[URL]:

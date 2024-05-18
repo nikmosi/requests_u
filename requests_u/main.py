@@ -25,7 +25,7 @@ def trim(args: TrimArgs, chapters: Iterable[Chapter]) -> Iterable[Chapter]:
 
 def interactive_trim(chapters: Iterable[Chapter]) -> Iterable[Chapter]:
     chapters_list = list(chapters)
-    base_names = list(map(lambda a: a.base_name, chapters_list))
+    base_names = [i.base_name for i in chapters_list]
 
     from_ = fzf_filter(base_names, "From chapter...")
     if len(from_) == 0:

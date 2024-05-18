@@ -1,4 +1,5 @@
 import asyncio
+import operator
 from dataclasses import asdict
 from typing import Iterable
 
@@ -79,7 +80,7 @@ class TlRulateLoader(MainPageLoader):
         async with asyncio.TaskGroup() as tg:
             for url in urls:
                 tasks.append(tg.create_task(LoadedImage.load_image(self.session, url)))
-        return filter(lambda a: a is not None, map(lambda t: t.result(), tasks))
+        return filter(None, map(operator.methodcaller("result"), tasks))
 
     @staticmethod
     def can_read(row: Tag) -> bool:

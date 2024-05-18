@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import mimetypes as mt
+import operator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -199,7 +200,7 @@ class EbookSaver(Saver):
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
         logger.debug(f"exit {type(self).__name__} saver")
-        self._items.sort(key=lambda a: a[0])
+        self._items.sort(key=operator.itemgetter(0))
         for i in self._items:
             self._book.add_item(i[1])
         style = "body { font-family: Roboto, Times, Times New Roman, serif; }"

@@ -39,9 +39,11 @@ class LoadedImage:
 
     @staticmethod
     async def load_image(
-        session: aiohttp.ClientSession, url: URL
+        session: aiohttp.ClientSession, url: URL, headers=None
     ) -> Union["LoadedImage", None]:
-        async with session.get(url, headers=LoadedImage.headers) as r:
+        if headers is None:
+            headers = LoadedImage.headers
+        async with session.get(url, headers=headers) as r:
             try:
                 Raiser.check_response(r)
             except Exception:

@@ -1,12 +1,14 @@
 import asyncio
 import json
+from dataclasses import asdict
 from typing import override
 
+from bs4 import BeautifulSoup
 from loguru import logger
 from yarl import URL
 
 from requests_u.helpers import Raiser, get_soup
-from requests_u.MainPage.LoadedModels import LoadedImage
+from requests_u.MainPage.LoadedModels import LoadedChapter, LoadedImage
 from requests_u.MainPage.models import MainPageInfo, MainPageLoader
 from requests_u.MainPage.NotLoadedModels import Chapter
 from requests_u.models import Saver
@@ -32,7 +34,7 @@ class RenovelsLoader(MainPageLoader):
 
         title = content["main_name"]
         cover = await LoadedImage.load_image(
-            self.session, self.domain.with_path(img_path)
+            self.session, self.domain.with_path(img_path), {}
         )
 
         covers = [cover] if cover is not None else []
@@ -56,15 +58,30 @@ class RenovelsLoader(MainPageLoader):
                         self.get_text_respose(url % {"count": count, "page": page + 1})
                     )
                 )
-        results = [json.loads(i.result()) for i in tasks]
-        logger.debug(results)
-        # TODO:
+        results = [json.loads(i.result())["content"] for i in tasks]
+        ids = [j["id"] for i in results for j in i]
+        api = URL("https://api.renovels.org/api/titles/chapters/")
+        return [Chapter(i, str(i), api / str(j)) for i, j in enumerate(ids)]
 
     async def get_text_respose(self, url):
         async with self.session.get(url) as r:
             Raiser.check_response(r)
             return await r.text()
 
+    async def download_chapter(self, chapter: Chapter) -> LoadedChapter:
+        res = json.loads(await self.get_text_respose(chapter.url))
+        logger.debug(f"get {chapter.base_name}")
+        content = res["content"]
+        title = content["chapter"]
+        content_p = content["content"]
+        html = BeautifulSoup(content_p, "lxml").find_all("p")
+        paragraphs = [i.text for i in html]
+
+        return LoadedChapter(
+            **asdict(chapter), title=title, images=[], paragraphs=paragraphs
+        )
+
     @override
     async def handle_chapter(self, chapter: Chapter, saver: Saver) -> None:
-        pass
+        lc = await self.download_chapter(chapter)
+        await saver.save_chapter(lc)

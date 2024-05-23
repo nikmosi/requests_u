@@ -61,7 +61,7 @@ class RenovelsLoader(MainPageLoader):
         results = [json.loads(i.result())["content"] for i in tasks]
         ids = [j["id"] for i in results for j in i]
         api = URL("https://api.renovels.org/api/titles/chapters/")
-        return [Chapter(i, str(i), api / str(j)) for i, j in enumerate(ids)]
+        return [Chapter(i, str(i), api / str(j)) for i, j in enumerate(ids, 1)]
 
     async def get_text_respose(self, url):
         async with self.session.get(url) as r:

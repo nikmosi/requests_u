@@ -49,6 +49,7 @@ def change_working_directory(working_directory: str) -> None:
         if not os.path.isdir(working_directory):
             msg = f"{working_directory=} isn't directory"
             logger.error(msg)
+            # TODO: custom exception
             raise Exception(msg)
         os.chdir(working_directory)
 
@@ -68,6 +69,7 @@ class Raiser:
             return value
         msg = f"parsing error got {type(value)}"
         logger.error(msg)
+        # TODO: custom exception
         raise ValueError(msg)
 
     @staticmethod
@@ -75,4 +77,5 @@ class Raiser:
         if response.status != HTTPStatus.OK:
             msg = f"get bad {response.status} from {response.url}"
             logger.error(msg)
+            # TODO: custom exception
             raise Exception(msg)

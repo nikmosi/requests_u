@@ -4,22 +4,22 @@ from itertools import batched
 from typing import Any, Iterable
 
 import aiohttp
-from helpers import change_working_directory
-from loader_helper import get_loader_for
 from loguru import logger
-from models import ConsoleArgumets, SaverContext, TrimArgs
 
+from requests_u.helpers import change_working_directory
+from requests_u.loader_helper import get_loader_for
 from requests_u.MainPage.models import Chapter
+from requests_u.models import ConsoleArguments, SaverContext, TrimArgs
 
 
 def trim(args: TrimArgs, chapters: Iterable[Chapter]) -> Iterable[Chapter]:
     if args.interactive:
         for item in interactive_trim(chapters):
             yield item
+        return []
     for i, chapter in enumerate(chapters, 1):
-        to_border = args.to is None or i >= args.to
-        from_border = args.from_ is None or i <= args.from_
-        if to_border and from_border:
+        in_bound = args.to <= i <= args.from_
+        if in_bound:
             yield chapter
 
 
@@ -27,45 +27,37 @@ def interactive_trim(chapters: Iterable[Chapter]) -> Iterable[Chapter]:
     chapters_list = list(chapters)
     base_names = [i.base_name for i in chapters_list]
 
-    from_ = fzf_filter(base_names, "From chapter...")
-    if len(from_) == 0:
+    # TODO: raise exceptions in len
+    from_name = fzf_filter(base_names, "From chapter...")
+    if len(from_name) == 0:
         logger.error("get empty from chapter.")
         exit(1)
-    to = fzf_filter(base_names, "To chapter...")
-    if len(to) == 0:
+    to_name = fzf_filter(base_names, "To chapter...")
+    if len(to_name) == 0:
         logger.error("get empty to chapter.")
         exit(1)
 
-    logger.debug(from_)
-    logger.debug(to)
+    logger.debug(f"{from_name=}, {to_name=}")
 
-    from_index = base_names.index(from_)
-    to_index = base_names.index(to)
+    from_index = base_names.index(from_name)
+    to_index = base_names.index(to_name)
 
     if from_index > to_index:
         logger.error(f"{from_index=} more than {to_index=}")
-
-    logger.debug(f"{from_index=}")
-    logger.debug(f"{to_index=}")
 
     return chapters_list[from_index : to_index + 1]
 
 
 def fzf_filter(data: Iterable[Any], placeholder: str = "Filter...") -> str:
-    printf = sb.Popen(
-        ["printf", "%s\n", *map(str, data)],
-        stdout=sb.PIPE,
+    input_data = "\n".join(map(str, data))
+    selected_item = sb.check_output(
+        f"fzf --color=16 --prompt='{placeholder} > '",
+        input=input_data,
         text=True,
-    )
-    filtered = sb.Popen(
-        ["fzf", "--color=16", f'--prompt="{placeholder}" >'],
-        stdin=printf.stdout,
-        stdout=sb.PIPE,
-        text=True,
-    )
-    out, _ = filtered.communicate()
-    logger.debug(f"{out=}")
-    return out.rstrip("\n")
+        shell=True,
+    ).strip()
+    logger.debug(f"{selected_item=}")
+    return selected_item
 
 
 @logger.catch
@@ -86,7 +78,7 @@ async def run(session: aiohttp.ClientSession, args):
 
 async def main():
     logger.debug("run")
-    args = ConsoleArgumets.get_arguments()
+    args = ConsoleArguments.get_arguments()
     change_working_directory(args.working_directory)
     cookies = {"mature": "c3a2ed4b199a1a15f5a5483504c7a75a7030dc4bi%3A1%3B"}
     async with aiohttp.ClientSession(cookies=cookies) as session:

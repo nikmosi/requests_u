@@ -10,17 +10,17 @@ from typing import Iterable
 
 import aiofiles
 from ebooklib import epub
-from helpers import inheritors
 from loguru import logger
 from yarl import URL
 
+from requests_u.helpers import inheritors
 from requests_u.MainPage.LoadedModels import LoadedChapter, LoadedImage
 
 
 @dataclass
 class TrimArgs:
-    from_: int | None
-    to: int | None
+    from_: float
+    to: float
     interactive: bool
 
 
@@ -226,7 +226,7 @@ class EbookSaver(Saver):
 
 
 @dataclass
-class ConsoleArgumets:
+class ConsoleArguments:
     working_directory: str
     chunk_size: int
     url: URL
@@ -234,7 +234,7 @@ class ConsoleArgumets:
     saver: type
 
     @staticmethod
-    def get_arguments() -> "ConsoleArgumets":
+    def get_arguments() -> "ConsoleArguments":
         parser = argparse.ArgumentParser()
         parser.add_argument(
             "url",
@@ -252,14 +252,14 @@ class ConsoleArgumets:
             "--from",
             dest="from_",
             help="chapter index from download (included) {start with 1}",
-            type=int,
+            type=float,
             default=None,
         )
         parser.add_argument(
             "-t",
             "--to",
             help="chapter index to download (included)",
-            type=int,
+            type=float,
             default=None,
         )
         parser.add_argument(
@@ -281,9 +281,13 @@ class ConsoleArgumets:
             default="EbookSaver",
         )
         args = parser.parse_args()
+        if not args.from_:
+            args.from_ = float("-inf")
+        if not args.to:
+            args.to = float("inf")
         trim_args = TrimArgs(from_=args.from_, to=args.to, interactive=args.interactive)
 
-        return ConsoleArgumets(
+        return ConsoleArguments(
             chunk_size=args.chunk_size,
             url=args.url,
             saver=Saver.get_saver_by_name(args.saver),

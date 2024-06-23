@@ -15,4 +15,5 @@ def get_loader_for(url: URL, session: aiohttp.ClientSession) -> MainPageLoader:
         case "renovels.org":
             return RenovelsLoader(url, session)
         case _:
+            # TODO: add exception for notimplementede loader
             raise NotImplementedError()

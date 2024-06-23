@@ -4,8 +4,9 @@ from typing import Iterable
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from helpers import Raiser
 from yarl import URL
+
+from requests_u.helpers import Raiser
 
 
 @dataclass

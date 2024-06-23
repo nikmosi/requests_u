@@ -25,8 +25,8 @@ class MainPageLoader(ABC):
 
     @abstractmethod
     async def get_main_page(self) -> MainPageInfo:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     async def handle_chapter(self, chapter: Chapter, saver: Saver) -> None:
-        pass
+        raise NotImplementedError

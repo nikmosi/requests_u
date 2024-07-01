@@ -1,22 +1,21 @@
 import asyncio
 import operator
+from collections.abc import Sequence
 from dataclasses import asdict
 from typing import Iterable
 
 from bs4.element import Tag
-from helpers import Raiser, get_soup
 from loguru import logger
-from TextContainer import TlRulateTextContainer
 from yarl import URL
 
-from requests_u.MainPage.LoadedModels import LoadedChapter
-from requests_u.MainPage.models import (
-    Chapter,
-    LoadedImage,
-    MainPageInfo,
-    MainPageLoader,
-)
-from requests_u.models import Saver
+from requests_u.domain.entities.chapters import Chapter, LoadedChapter
+from requests_u.domain.entities.images import Image, LoadedImage
+from requests_u.domain.entities.main_page import MainPageInfo
+from requests_u.general.helpers import get_soup
+from requests_u.general.Raiser import Raiser
+from requests_u.logic.Saver import Saver
+from requests_u.MainPage.models import MainPageLoader
+from requests_u.TextContainer import TlRulateTextContainer
 
 
 class TlRulateLoader(MainPageLoader):
@@ -43,7 +42,7 @@ class TlRulateLoader(MainPageLoader):
             covers=covers,
         )
 
-    async def get_covers(self, main_page_soup: Tag) -> list["LoadedImage"]:
+    async def get_covers(self, main_page_soup: Tag) -> Sequence[LoadedImage]:
         logger.debug("loading covers")
         container = main_page_soup.find(class_="images")
         if not isinstance(container, Tag):
@@ -53,7 +52,8 @@ class TlRulateLoader(MainPageLoader):
 
         images = []
         for i in image_urls:
-            images.append(await LoadedImage.load_image(self.session, i))
+            image = Image(url=i)
+            images.append(await self.image_loader.load_image(image))
         logger.debug(f"load {len(images)} covers")
         return images
 
@@ -79,7 +79,8 @@ class TlRulateLoader(MainPageLoader):
         tasks = []
         async with asyncio.TaskGroup() as tg:
             for url in urls:
-                tasks.append(tg.create_task(LoadedImage.load_image(self.session, url)))
+                image = Image(url)
+                tasks.append(tg.create_task(self.image_loader.load_image(image)))
         return filter(None, map(operator.methodcaller("result"), tasks))
 
     @staticmethod

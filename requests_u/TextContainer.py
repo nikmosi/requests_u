@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 from yarl import URL
 
-from requests_u.helpers import Raiser
+from requests_u.general.Raiser import Raiser
 
 
 @dataclass

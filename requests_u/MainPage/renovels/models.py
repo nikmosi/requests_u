@@ -7,11 +7,13 @@ from bs4 import BeautifulSoup
 from loguru import logger
 from yarl import URL
 
-from requests_u.helpers import Raiser, get_soup
-from requests_u.MainPage.LoadedModels import LoadedChapter, LoadedImage
-from requests_u.MainPage.models import MainPageInfo, MainPageLoader
-from requests_u.MainPage.NotLoadedModels import Chapter
-from requests_u.models import Saver
+from requests_u.domain.entities.chapters import Chapter, LoadedChapter
+from requests_u.domain.entities.images import Image
+from requests_u.domain.entities.main_page import MainPageInfo
+from requests_u.general.helpers import get_soup
+from requests_u.general.Raiser import Raiser
+from requests_u.logic.Saver import Saver
+from requests_u.MainPage.models import MainPageLoader
 
 
 class RenovelsLoader(MainPageLoader):
@@ -33,9 +35,8 @@ class RenovelsLoader(MainPageLoader):
         count_chapters = content["count_chapters"]
 
         title = content["main_name"]
-        cover = await LoadedImage.load_image(
-            self.session, self.domain.with_path(img_path), {}
-        )
+        image = Image(self.domain.with_path(img_path))
+        cover = await self.image_loader.load_image(image)
 
         covers = [cover] if cover is not None else []
 

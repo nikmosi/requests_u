@@ -6,19 +6,24 @@ from typing import Any, Iterable
 import aiohttp
 from loguru import logger
 
-from requests_u.helpers import change_working_directory
-from requests_u.loader_helper import get_loader_for
-from requests_u.MainPage.models import Chapter
-from requests_u.models import ConsoleArguments, SaverContext, TrimArgs
+from requests_u.domain.entities.chapters import Chapter
+from requests_u.domain.entities.saver_context import SaverContext
+from requests_u.general.helpers import change_working_directory, get_loader_for
+from requests_u.models import ConsoleArguments, TrimArgs
 
 
 def trim(args: TrimArgs, chapters: Iterable[Chapter]) -> Iterable[Chapter]:
     if args.interactive:
-        for item in interactive_trim(chapters):
-            yield item
-        return []
+        return interactive_trim(chapters)
+    else:
+        return in_bound_trim(chapters, args.from_, args.to)
+
+
+def in_bound_trim(
+    chapters: Iterable[Chapter], start: float, end: float
+) -> Iterable[Chapter]:
     for i, chapter in enumerate(chapters, 1):
-        in_bound = args.to <= i <= args.from_
+        in_bound = start <= i <= end
         if in_bound:
             yield chapter
 

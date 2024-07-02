@@ -1,5 +1,6 @@
 import asyncio
 import subprocess as sb
+from dataclasses import dataclass
 from itertools import batched
 from typing import Any, Iterable
 
@@ -67,12 +68,15 @@ def fzf_filter(data: Iterable[Any], placeholder: str = "Filter...") -> str:
     return selected_item
 
 
-async def handle_chapter(
-    chapter: Chapter, saver: Saver, chapter_loader: ChapterLoader
-) -> None:
-    logger.debug(f"{chapter.base_name}")
-    loaded_chapter = await chapter_loader.load_chapter(chapter)
-    await saver.save_chapter(loaded_chapter)
+@dataclass
+class ChapterHandler:
+    saver: Saver
+    chapter_loader: ChapterLoader
+
+    async def handle(self, chapter: Chapter):
+        logger.debug(f"{chapter.base_name}")
+        loaded_chapter = await self.chapter_loader.load_chapter(chapter)
+        await self.saver.save_chapter(loaded_chapter)
 
 
 @logger.catch
@@ -85,10 +89,11 @@ async def run(session: aiohttp.ClientSession, args):
     )
 
     with args.saver(saver_context) as s:
+        chapter_handler = ChapterHandler(s, chapter_loader)
         for chunked in batched(trimmed_chapters, n=args.chunk_size):
             async with asyncio.TaskGroup() as tg:
                 for chapter in chunked:
-                    tg.create_task(handle_chapter(chapter, s, chapter_loader))
+                    tg.create_task(chapter_handler.handle(chapter))
 
 
 async def main():

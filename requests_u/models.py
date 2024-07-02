@@ -17,7 +17,7 @@ class TrimArgs:
 
 @dataclass
 class ConsoleArguments:
-    working_directory: str
+    working_directory: Path
     chunk_size: int
     url: URL
     trim_args: TrimArgs

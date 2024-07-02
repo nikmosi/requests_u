@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from requests_u.domain.entities.images import LoadedImage
@@ -7,5 +8,5 @@ from requests_u.domain.entities.images import LoadedImage
 class SaverContext:
     title: str
     language: str
-    covers: list[LoadedImage]
+    covers: Sequence[LoadedImage]
     author: str = "nikmosi"

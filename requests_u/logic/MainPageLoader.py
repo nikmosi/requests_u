@@ -19,9 +19,7 @@ class MainPageLoader(ABC):
         self.image_loader = image_loader
 
     @abstractmethod
-    async def get_main_page(self) -> MainPageInfo:
-        raise NotImplementedError
+    async def get_main_page(self) -> MainPageInfo: ...
 
     @abstractmethod
-    async def handle_chapter(self, chapter: Chapter, saver: Saver) -> None:
-        raise NotImplementedError
+    async def handle_chapter(self, chapter: Chapter, saver: Saver) -> None: ...

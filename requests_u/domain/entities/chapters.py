@@ -1,5 +1,5 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Iterable
 
 from yarl import URL
 
@@ -19,6 +19,6 @@ class Chapter:
 
 @dataclass(frozen=True, slots=True)
 class LoadedChapter(Chapter):
-    paragraphs: Iterable[str]
-    images: Iterable[LoadedImage]
+    paragraphs: Sequence[str]
+    images: Sequence[LoadedImage]
     title: str

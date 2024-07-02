@@ -10,6 +10,11 @@ from requests_u.general.exceptions.helpers import (
     FindLoaderException,
     FindSaverException,
 )
+from requests_u.logic.ChapterLoader import (
+    ChapterLoader,
+    RenovelsChapterLoader,
+    TlRulateChapterLoader,
+)
 from requests_u.logic.ImageLoader import BasicLoader
 from requests_u.logic.MainPage.renovels import RenovelsLoader
 from requests_u.logic.MainPage.tlrulate import TlRulateLoader
@@ -39,13 +44,24 @@ def change_working_directory(working_directory: Path) -> None:
     os.chdir(working_directory)
 
 
-def get_loader_for(url: URL, session: aiohttp.ClientSession) -> MainPageLoader:
+def get_loader_for(
+    url: URL, session: aiohttp.ClientSession
+) -> (MainPageLoader, ChapterLoader):
     logger.debug(f"get {url.host=}")
+    image_loader = BasicLoader(session)
     match url.host:
         case "tl.rulate.ru":
-            return TlRulateLoader(url, session, BasicLoader(session))
+            return TlRulateLoader(
+                url,
+                session,
+                image_loader,
+            ), TlRulateChapterLoader(session, image_loader)
         case "renovels.org":
-            return RenovelsLoader(url, session, BasicLoader(session))
+            return RenovelsLoader(
+                url,
+                session,
+                image_loader,
+            ), RenovelsChapterLoader(session)
         case _:
             raise FindLoaderException(url)
 

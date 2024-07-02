@@ -9,6 +9,8 @@ from loguru import logger
 from requests_u.domain.entities.chapters import Chapter
 from requests_u.domain.entities.saver_context import SaverContext
 from requests_u.general.helpers import change_working_directory, get_loader_for
+from requests_u.logic.ChapterLoader import ChapterLoader
+from requests_u.logic.Saver import Saver
 from requests_u.models import ConsoleArguments, TrimArgs
 
 
@@ -65,10 +67,18 @@ def fzf_filter(data: Iterable[Any], placeholder: str = "Filter...") -> str:
     return selected_item
 
 
+async def handle_chapter(
+    chapter: Chapter, saver: Saver, chapter_loader: ChapterLoader
+) -> None:
+    logger.debug(f"{chapter.base_name}")
+    loaded_chapter = await chapter_loader.load_chapter(chapter)
+    await saver.save_chapter(loaded_chapter)
+
+
 @logger.catch
 async def run(session: aiohttp.ClientSession, args):
-    loader = get_loader_for(args.url, session)
-    main_page = await loader.get_main_page()
+    main_page_loader, chapter_loader = get_loader_for(args.url, session)
+    main_page = await main_page_loader.get_main_page()
     trimmed_chapters = trim(args.trim_args, main_page.chapters)
     saver_context = SaverContext(
         title=main_page.title, language="ru", covers=main_page.covers
@@ -78,7 +88,7 @@ async def run(session: aiohttp.ClientSession, args):
         for chunked in batched(trimmed_chapters, n=args.chunk_size):
             async with asyncio.TaskGroup() as tg:
                 for chapter in chunked:
-                    tg.create_task(loader.handle_chapter(chapter, s))
+                    tg.create_task(handle_chapter(chapter, s, chapter_loader))
 
 
 async def main():

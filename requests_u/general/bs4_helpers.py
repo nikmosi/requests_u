@@ -1,5 +1,6 @@
 import aiohttp
 import fake_useragent as fa
+from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 from yarl import URL
 
@@ -24,3 +25,9 @@ def get_headers() -> dict:
         "Accept-Language": "en-US,en",
         "Accept-Encoding": "gzip",
     }
+
+
+async def get_text_response(session: ClientSession, url: URL):
+    async with session.get(url) as r:
+        Raiser.check_response(r)
+        return await r.text()

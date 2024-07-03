@@ -1,8 +1,9 @@
 import asyncio
 import subprocess as sb
+from collections.abc import Iterable
 from dataclasses import dataclass
 from itertools import batched
-from typing import Any, Iterable
+from typing import Any
 
 import aiohttp
 from loguru import logger

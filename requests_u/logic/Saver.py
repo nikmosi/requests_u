@@ -2,10 +2,10 @@ import asyncio
 import mimetypes as mt
 import operator
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from random import choice
-from typing import Iterable
 
 import aiofiles
 from ebooklib import epub
@@ -23,6 +23,7 @@ class Saver(ABC):
     def __enter__(self) -> "Saver":
         return self
 
+    @abstractmethod
     def __exit__(self, exception_type, exception_value, exception_traceback):
         pass
 
@@ -107,11 +108,7 @@ class EbookSaver(Saver):
             chapter_id=loaded_chapter.id, images=loaded_chapter.images
         )
         html.set_content(
-            "<html><body><p>{}</p><br/>{}{}</html>".format(
-                loaded_chapter.title,
-                self.get_paragraph_html(loaded_chapter),
-                self.get_images_html(paths),
-            )
+            f"<html><body><p>{loaded_chapter.title}</p><br/>{self.get_paragraph_html(loaded_chapter)}{self.get_images_html(paths)}</html>"
         )
 
         obj = (loaded_chapter.id, html)
@@ -160,7 +157,7 @@ class EbookSaver(Saver):
             lang=self.context.language,
         )
 
-        page.set_content("<html><body><br/>{}</html>".format(image_htmls))
+        page.set_content(f"<html><body><br/>{image_htmls}</html>")
 
         return page
 
@@ -177,9 +174,7 @@ class EbookSaver(Saver):
         )
         self._book.add_item(nav_css)
 
-        setattr(
-            self._book, "toc", (epub.Section("Chapters"), *[i[1] for i in self._items])
-        )
+        self._book.toc = epub.Section("Chapters"), *[i[1] for i in self._items]
 
         self._book.spine = ["nav", *[i[1] for i in self._items]]
 

@@ -1,7 +1,7 @@
 import operator
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Iterable, override
+from typing import override
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag

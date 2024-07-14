@@ -4,8 +4,8 @@ from typing import override
 
 import aiohttp
 
+import requests_u.general.Raiser as Raiser
 from requests_u.domain.entities.images import Image, LoadedImage
-from requests_u.general.Raiser import Raiser
 
 
 class ImageLoader(ABC):

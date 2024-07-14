@@ -8,11 +8,11 @@ from bs4.element import Tag
 from loguru import logger
 from yarl import URL
 
+import requests_u.general.Raiser as Raiser
 from requests_u.domain.entities.chapters import Chapter
 from requests_u.domain.entities.images import Image, LoadedImage
 from requests_u.domain.entities.main_page import MainPageInfo
 from requests_u.general.bs4_helpers import get_soup
-from requests_u.general.Raiser import Raiser
 from requests_u.logic.MainPageLoader import MainPageLoader
 
 

@@ -19,6 +19,11 @@ aiofiles = "^23.2.1"
 ebooklib = "^0.18"
 
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+pytest-mock = "^3.14.0"
+pytest-asyncio = "^0.23.7"
+
 [build-system]
 requires = ["poetry-core", "fzf"]
 build-backend = "poetry.core.masonry.api"

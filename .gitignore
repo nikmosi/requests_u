@@ -1,6 +1,7 @@
 runner.sh
 .idea
 temp
+.pdm-python
 
 
 ### Created by https://www.gitignore.io

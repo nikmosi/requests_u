@@ -1,6 +1,6 @@
 from functools import wraps
 
-import requests_u.general.Raiser as Raiser
+import general.Raiser as Raiser
 
 
 def check_on_tag(func):

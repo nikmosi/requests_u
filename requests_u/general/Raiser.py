@@ -3,8 +3,7 @@ from typing import Any
 
 from aiohttp.client_reqrep import ClientResponse
 from bs4 import Tag
-
-from requests_u.general.exceptions.Raiser import HttpError, MissingType
+from general.exceptions.Raiser import HttpError, MissingType
 
 
 def check_on_str(value) -> str:

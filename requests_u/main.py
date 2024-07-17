@@ -6,14 +6,13 @@ from itertools import batched
 from typing import Any
 
 import aiohttp
+from domain.entities.chapters import Chapter
+from domain.entities.saver_context import SaverContext
+from general.helpers import change_working_directory, get_loader_for
+from logic.ChapterLoader import ChapterLoader
+from logic.Saver import Saver
 from loguru import logger
-
-from requests_u.domain.entities.chapters import Chapter
-from requests_u.domain.entities.saver_context import SaverContext
-from requests_u.general.helpers import change_working_directory, get_loader_for
-from requests_u.logic.ChapterLoader import ChapterLoader
-from requests_u.logic.Saver import Saver
-from requests_u.models import ConsoleArguments, TrimArgs
+from models import ConsoleArguments, TrimArgs
 
 
 def trim(args: TrimArgs, chapters: Iterable[Chapter]) -> Iterable[Chapter]:

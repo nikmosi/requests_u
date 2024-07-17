@@ -3,13 +3,12 @@ import json
 from collections.abc import Sequence
 from typing import override
 
+from domain.entities.chapters import Chapter
+from domain.entities.images import Image
+from domain.entities.main_page import MainPageInfo
+from general.bs4_helpers import get_soup, get_text_response
+from logic.MainPageLoader import MainPageLoader
 from yarl import URL
-
-from requests_u.domain.entities.chapters import Chapter
-from requests_u.domain.entities.images import Image
-from requests_u.domain.entities.main_page import MainPageInfo
-from requests_u.general.bs4_helpers import get_soup, get_text_response
-from requests_u.logic.MainPageLoader import MainPageLoader
 
 
 class RenovelsLoader(MainPageLoader):

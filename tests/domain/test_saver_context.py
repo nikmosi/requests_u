@@ -1,7 +1,6 @@
+from domain.entities.images import LoadedImage
+from domain.entities.saver_context import SaverContext
 from yarl import URL
-
-from requests_u.domain.entities.images import LoadedImage
-from requests_u.domain.entities.saver_context import SaverContext
 
 
 def test_saver_context():

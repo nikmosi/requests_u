@@ -1,7 +1,6 @@
+from domain.entities.chapters import Chapter, LoadedChapter
+from domain.entities.images import LoadedImage
 from yarl import URL
-
-from requests_u.domain.entities.chapters import Chapter, LoadedChapter
-from requests_u.domain.entities.images import LoadedImage
 
 
 def test_chapter_base_name():

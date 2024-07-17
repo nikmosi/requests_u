@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from general.exceptions.base import GeneralException
 from yarl import URL
-
-from requests_u.general.exceptions.base import GeneralException
 
 
 @dataclass

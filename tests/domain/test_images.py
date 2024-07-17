@@ -1,6 +1,5 @@
+from domain.entities.images import Image, LoadedImage
 from yarl import URL
-
-from requests_u.domain.entities.images import Image, LoadedImage
 
 
 def test_image_name():

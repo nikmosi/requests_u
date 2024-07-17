@@ -2,24 +2,23 @@ import os
 from pathlib import Path
 
 import aiohttp
-from loguru import logger
-from yarl import URL
-
-from requests_u.general.exceptions.helpers import (
+from general.exceptions.helpers import (
     DirectoryPlaceTakenByFileException,
     FindLoaderException,
     FindSaverException,
 )
-from requests_u.logic.ChapterLoader import (
+from logic.ChapterLoader import (
     ChapterLoader,
     RenovelsChapterLoader,
     TlRulateChapterLoader,
 )
-from requests_u.logic.ImageLoader import BasicLoader
-from requests_u.logic.MainPage.renovels import RenovelsLoader
-from requests_u.logic.MainPage.tlrulate import TlRulateLoader
-from requests_u.logic.MainPageLoader import MainPageLoader
-from requests_u.logic.Saver import Saver
+from logic.ImageLoader import BasicLoader
+from logic.MainPage.renovels import RenovelsLoader
+from logic.MainPage.tlrulate import TlRulateLoader
+from logic.MainPageLoader import MainPageLoader
+from logic.Saver import Saver
+from loguru import logger
+from yarl import URL
 
 
 def inheritors(klass):

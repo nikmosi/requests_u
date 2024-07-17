@@ -2,10 +2,9 @@ import argparse
 from dataclasses import dataclass
 from pathlib import Path
 
+from general.helpers import get_saver_by_name, inheritors
+from logic.Saver import Saver
 from yarl import URL
-
-from requests_u.general.helpers import get_saver_by_name, inheritors
-from requests_u.logic.Saver import Saver
 
 
 @dataclass(frozen=True, slots=True)

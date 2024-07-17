@@ -8,12 +8,11 @@ from pathlib import Path
 from random import choice
 
 import aiofiles
+from domain.entities.chapters import LoadedChapter
+from domain.entities.images import LoadedImage
+from domain.entities.saver_context import SaverContext
 from ebooklib import epub
 from loguru import logger
-
-from requests_u.domain.entities.chapters import LoadedChapter
-from requests_u.domain.entities.images import LoadedImage
-from requests_u.domain.entities.saver_context import SaverContext
 
 
 @dataclass

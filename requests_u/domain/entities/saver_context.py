@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from requests_u.domain.entities.images import LoadedImage
+from domain.entities.images import LoadedImage
 
 
 @dataclass

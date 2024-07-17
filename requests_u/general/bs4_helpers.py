@@ -1,10 +1,9 @@
 import aiohttp
 import fake_useragent as fa
+import general.Raiser as Raiser
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 from yarl import URL
-
-import requests_u.general.Raiser as Raiser
 
 
 async def get_soup(session: aiohttp.ClientSession, url: URL) -> BeautifulSoup:

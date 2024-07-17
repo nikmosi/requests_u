@@ -1,4 +1,4 @@
-from requests_u.domain.exceptions.base import BaseDomainError
+from domain.exceptions.base import BaseDomainError
 
 
 def test_base_domain_error_message():

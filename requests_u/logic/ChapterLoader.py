@@ -8,14 +8,13 @@ from typing import override
 
 import aiohttp
 from bs4 import BeautifulSoup
+from domain.entities.chapters import Chapter, LoadedChapter
+from domain.entities.images import Image, LoadedImage
+from general.bs4_helpers import get_soup, get_text_response
+from logic.ImageLoader import ImageLoader
+from logic.MainPage.tlrulate import TextContainerParser
 from loguru import logger
 from yarl import URL
-
-from requests_u.domain.entities.chapters import Chapter, LoadedChapter
-from requests_u.domain.entities.images import Image, LoadedImage
-from requests_u.general.bs4_helpers import get_soup, get_text_response
-from requests_u.logic.ImageLoader import ImageLoader
-from requests_u.logic.MainPage.tlrulate import TextContainerParser
 
 
 @dataclass(eq=False)

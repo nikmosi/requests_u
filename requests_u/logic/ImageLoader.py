@@ -3,9 +3,8 @@ from dataclasses import dataclass, field
 from typing import override
 
 import aiohttp
-
-import requests_u.general.Raiser as Raiser
-from requests_u.domain.entities.images import Image, LoadedImage
+import general.Raiser as Raiser
+from domain.entities.images import Image, LoadedImage
 
 
 class ImageLoader(ABC):

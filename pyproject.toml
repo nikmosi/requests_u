@@ -15,6 +15,8 @@ dependencies = [
     "aiodns>=3.0.0",
     "aiofiles>=23.2.1",
     "ebooklib>=0.18",
+    "pytest>=8.2.2",
+    "pytest-timeout>=2.3.1",
 ]
 requires-python = "==3.12.*"
 readme = "README.md"

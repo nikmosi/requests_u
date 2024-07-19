@@ -3,6 +3,15 @@ from domain.entities.images import LoadedImage
 from yarl import URL
 
 
+def test_chapter_field_access():
+    chapter = Chapter(
+        id=1, name="Introduction", url=URL("http://example.com/chapter/1")
+    )
+    assert chapter.id == 1
+    assert chapter.name == "Introduction"
+    assert chapter.url == URL("http://example.com/chapter/1")
+
+
 def test_chapter_base_name():
     chapter = Chapter(
         id=1, name="Introduction", url=URL("http://example.com/chapter/1")

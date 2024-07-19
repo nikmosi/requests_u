@@ -17,6 +17,7 @@ dependencies = [
     "ebooklib>=0.18",
     "pytest>=8.2.2",
     "pytest-timeout>=2.3.1",
+    "pydantic-settings>=2.3.4",
 ]
 requires-python = "==3.12.*"
 readme = "README.md"

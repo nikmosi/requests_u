@@ -8,14 +8,18 @@ from typing import Any
 import aiohttp
 from domain.entities.chapters import Chapter
 from domain.entities.saver_context import SaverContext
-from general.helpers import change_working_directory, get_loader_for
+from general.helpers import (
+    change_working_directory,
+    get_loader_for,
+    parse_console_arguments,
+)
 from logic.ChapterLoader import ChapterLoader
 from logic.Saver import Saver
 from loguru import logger
-from models import ConsoleArguments, TrimArgs
+from settings.config import Config, TrimConfig
 
 
-def trim(args: TrimArgs, chapters: Iterable[Chapter]) -> Iterable[Chapter]:
+def trim(args: TrimConfig, chapters: Iterable[Chapter]) -> Iterable[Chapter]:
     if args.interactive:
         return interactive_trim(chapters)
     else:
@@ -80,7 +84,7 @@ class ChapterHandler:
 
 
 @logger.catch
-async def run(session: aiohttp.ClientSession, args):
+async def run(session: aiohttp.ClientSession, args: Config):
     main_page_loader, chapter_loader = get_loader_for(args.url, session)
     main_page = await main_page_loader.get_main_page()
     trimmed_chapters = trim(args.trim_args, main_page.chapters)
@@ -98,7 +102,7 @@ async def run(session: aiohttp.ClientSession, args):
 
 async def main():
     logger.debug("run")
-    args = ConsoleArguments.get_arguments()
+    args = parse_console_arguments()
     change_working_directory(args.working_directory)
     cookies = {"mature": "c3a2ed4b199a1a15f5a5483504c7a75a7030dc4bi%3A1%3B"}
     async with aiohttp.ClientSession(cookies=cookies) as session:

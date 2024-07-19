@@ -25,6 +25,9 @@ license = {text = "MIT"}
 [tool.pdm]
 distribution = false
 
+[tool.pdm.scripts]
+test = "pytest --timeout 300 -v -s"
+
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"

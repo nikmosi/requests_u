@@ -27,12 +27,13 @@ license = {text = "MIT"}
 distribution = false
 
 [tool.pdm.scripts]
-test = "pytest --timeout 300 -v -s"
+test = "pytest"
 
 [tool.pytest.ini_options]
 pythonpath = [
   "src"
 ]
+addopts = "--timeout 300 -v -s --strict-markers -ra"
 
 [build-system]
 requires = ["pdm-backend"]

@@ -1,15 +1,18 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from http import HTTPStatus
 from typing import override
 
 import aiohttp
 import general.Raiser as Raiser
 from domain.entities.images import Image, LoadedImage
 
+from src.general.exceptions.Raiser import HttpError
+
 
 class ImageLoader(ABC):
     @abstractmethod
-    async def load_image(self, image: Image) -> LoadedImage: ...
+    async def load_image(self, image: Image) -> LoadedImage | None: ...
 
 
 @dataclass
@@ -38,5 +41,10 @@ class BasicLoader(ImageLoader):
     async def load_image(self, image: Image) -> LoadedImage | None:
         url = image.url
         async with self.session.get(url, headers=self.headers) as r:
-            Raiser.check_response(r)
+            try:
+                Raiser.check_response(r)
+            except HttpError as e:
+                if e.status == HTTPStatus.NOT_FOUND:
+                    return
+                raise e
             return LoadedImage(url=url, data=await r.read())

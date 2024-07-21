@@ -6,8 +6,7 @@ from typing import override
 import aiohttp
 import general.Raiser as Raiser
 from domain.entities.images import Image, LoadedImage
-
-from src.general.exceptions.Raiser import HttpError
+from general.exceptions.Raiser import HttpError
 
 
 class ImageLoader(ABC):

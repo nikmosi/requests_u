@@ -34,7 +34,9 @@ class TlRulateChapterLoader(ChapterLoader):
         soup = await get_soup(self.session, chapter.url)
 
         text_container = TextContainerParser(soup).parse()
-        images = await self.load_images_by_urls(text_container.image_urls)
+        image_urls = text_container.image_urls
+        image_urls = list(map(lambda i: self.normalize_url(i, chapter.url), image_urls))
+        images = await self.load_images_by_urls(image_urls)
 
         return LoadedChapter(
             **asdict(chapter),
@@ -42,6 +44,11 @@ class TlRulateChapterLoader(ChapterLoader):
             paragraphs=text_container.paragraphs,
             images=images,
         )
+
+    def normalize_url(self, url: URL, domain: URL) -> URL:
+        if url.is_absolute():
+            return url
+        return domain.with_path(url.path)
 
     async def load_images_by_urls(self, urls: Sequence[URL]) -> Sequence[LoadedImage]:
         tasks = []

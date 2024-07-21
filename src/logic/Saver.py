@@ -117,9 +117,14 @@ class EbookSaver(Saver):
     def get_paragraph_html(self, loaded_chapter: LoadedChapter):
         return "".join(f"<p>{i.strip()}</p>" for i in loaded_chapter.paragraphs)
 
-    def get_images_html(self, paths: Iterable[Path], prefix: str = "<h1>Images</h1>"):
+    def get_images_html(
+        self,
+        paths: Iterable[Path],
+        prefix: str = "<h1>Images</h1>",
+        path_prefix=Path(".."),
+    ):
         html = "".join(
-            f"<img src=\"{Path('..') / i}\" alt=\"dead image----\" />" for i in paths
+            f'<img src="{path_prefix / i}" alt="dead image----" />' for i in paths
         )
 
         return prefix + html if len(html) > 0 else ""
@@ -148,7 +153,7 @@ class EbookSaver(Saver):
     def add_cover_collection(self):
         covers = self.context.covers
         paths = self.add_images_to_book(-1, covers)
-        image_htmls = self.get_images_html(paths, prefix="")
+        image_htmls = self.get_images_html(paths, prefix="", path_prefix=Path("."))
 
         page = epub.EpubHtml(
             title="Covers",

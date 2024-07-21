@@ -53,6 +53,7 @@ class TextContainerParser:
     @property
     def title(self) -> str:
         title = self.text_container.find("h1")
+        assert title is not None
         Raiser.check_on_tag(title)
         return title.text
 

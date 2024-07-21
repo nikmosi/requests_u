@@ -14,8 +14,8 @@ from logic.ChapterLoader import (
     TlRulateChapterLoader,
 )
 from logic.ImageLoader import BasicLoader
-from logic.MainPage.renovels import RenovelsLoader
-from logic.MainPage.tlrulate import TlRulateLoader
+from logic.main_page.renovels import RenovelsLoader
+from logic.main_page.tlrulate import TlRulateLoader
 from logic.MainPageLoader import MainPageLoader
 from logic.Saver import Saver
 from loguru import logger

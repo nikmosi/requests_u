@@ -12,6 +12,7 @@ from domain.entities.chapters import LoadedChapter
 from domain.entities.images import LoadedImage
 from domain.entities.saver_context import SaverContext
 from ebooklib import epub
+from logic.exceptions.base import SaverUsingWithoutWithException
 from loguru import logger
 
 
@@ -97,7 +98,7 @@ class EbookSaver(Saver):
         if not self._is_entered:
             msg = "this saver require 'with'"
             logger.error(msg)
-            raise Exception(msg)
+            raise SaverUsingWithoutWithException()
         html = epub.EpubHtml(
             title=loaded_chapter.base_name,
             file_name=f"chapters/{loaded_chapter.base_name}.xhtml",
@@ -106,6 +107,7 @@ class EbookSaver(Saver):
         paths = self.add_images_to_book(
             chapter_id=loaded_chapter.id, images=loaded_chapter.images
         )
+        paths = [".." / path for path in paths]
         html.set_content(
             f"<html><body><p>{loaded_chapter.title}</p><br/>{self.get_paragraph_html(loaded_chapter)}{self.get_images_html(paths)}</html>"
         )
@@ -121,11 +123,8 @@ class EbookSaver(Saver):
         self,
         paths: Iterable[Path],
         prefix: str = "<h1>Images</h1>",
-        path_prefix=Path(".."),
     ):
-        html = "".join(
-            f'<img src="{path_prefix / i}" alt="dead image----" />' for i in paths
-        )
+        html = "".join(f'<img src="{i}" alt="dead image----" />' for i in paths)
 
         return prefix + html if len(html) > 0 else ""
 
@@ -153,7 +152,7 @@ class EbookSaver(Saver):
     def add_cover_collection(self):
         covers = self.context.covers
         paths = self.add_images_to_book(-1, covers)
-        image_htmls = self.get_images_html(paths, prefix="", path_prefix=Path("."))
+        image_htmls = self.get_images_html(paths, prefix="")
 
         page = epub.EpubHtml(
             title="Covers",

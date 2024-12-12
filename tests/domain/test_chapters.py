@@ -1,6 +1,7 @@
+from yarl import URL
+
 from domain.entities.chapters import Chapter, LoadedChapter
 from domain.entities.images import LoadedImage
-from yarl import URL
 
 
 def test_chapter_field_access():

@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 
 import aiohttp
+from yarl import URL
+
 from domain.entities.main_page import MainPageInfo
 from logic.ImageLoader import ImageLoader
-from yarl import URL
 
 
 class MainPageLoader(ABC):

@@ -1,7 +1,8 @@
+from yarl import URL
+
 from domain.entities.chapters import Chapter
 from domain.entities.images import LoadedImage
 from domain.entities.main_page import MainPageInfo
-from yarl import URL
 
 
 def test_main_page_info():

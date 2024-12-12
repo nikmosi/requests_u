@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import subprocess as sb
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -6,6 +7,8 @@ from itertools import batched
 from typing import Any
 
 import aiohttp
+from loguru import logger
+
 from domain.entities.chapters import Chapter
 from domain.entities.saver_context import SaverContext
 from general.helpers import (
@@ -15,7 +18,6 @@ from general.helpers import (
 )
 from logic.ChapterLoader import ChapterLoader
 from logic.Saver import Saver
-from loguru import logger
 from settings.config import Config, TrimConfig
 
 
@@ -111,7 +113,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
+    contextlib.suppress(KeyboardInterrupt)
+    asyncio.run(main())

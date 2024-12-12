@@ -3,6 +3,9 @@ import os
 from pathlib import Path
 
 import aiohttp
+from loguru import logger
+from yarl import URL
+
 from general.exceptions.helpers import (
     DirectoryPlaceTakenByFileException,
     FindLoaderException,
@@ -18,9 +21,7 @@ from logic.main_page.renovels import RenovelsLoader
 from logic.main_page.tlrulate import TlRulateLoader
 from logic.MainPageLoader import MainPageLoader
 from logic.Saver import Saver
-from loguru import logger
 from settings.config import Config, TrimConfig
-from yarl import URL
 
 
 def inheritors(klass):

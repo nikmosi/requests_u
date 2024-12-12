@@ -3,16 +3,17 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import override
 
-import general.Raiser as Raiser
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+from loguru import logger
+from yarl import URL
+
+import general.Raiser as Raiser
 from domain.entities.chapters import Chapter
 from domain.entities.images import Image, LoadedImage
 from domain.entities.main_page import MainPageInfo
 from general.bs4_helpers import get_soup
 from logic.MainPageLoader import MainPageLoader
-from loguru import logger
-from yarl import URL
 
 
 @dataclass

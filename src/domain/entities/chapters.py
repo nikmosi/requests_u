@@ -1,8 +1,9 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from domain.entities.images import LoadedImage
 from yarl import URL
+
+from domain.entities.images import LoadedImage
 
 
 @dataclass(frozen=True, slots=True)

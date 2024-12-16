@@ -2,43 +2,16 @@ import argparse
 import os
 from pathlib import Path
 
-import aiohttp
-from loguru import logger
 from yarl import URL
 
+from config import Settings, TrimSettings
 from general.exceptions.helpers import (
     DirectoryPlaceTakenByFileException,
-    FindLoaderException,
-    FindSaverException,
 )
-from logic.ChapterLoader import (
-    ChapterLoader,
-    RenovelsChapterLoader,
-    TlRulateChapterLoader,
-)
-from logic.ImageLoader import BasicLoader
-from logic.main_page.renovels import RenovelsLoader
-from logic.main_page.tlrulate import TlRulateLoader
-from logic.MainPageLoader import MainPageLoader
-from logic.Saver import Saver
-from settings.config import Config, TrimConfig
-
-
-def inheritors(klass):
-    subclasses = set()
-    work = [klass]
-    while work:
-        parent = work.pop()
-        for child in parent.__subclasses__():
-            if child not in subclasses:
-                subclasses.add(child)
-                work.append(child)
-    return subclasses
+from utils import get_all_saver_classes, get_saver_by_name
 
 
 def change_working_directory(working_directory: Path) -> None:
-    if not working_directory:
-        return
     if not working_directory.exists():
         os.mkdir(working_directory)
     if not working_directory.is_dir():
@@ -46,36 +19,7 @@ def change_working_directory(working_directory: Path) -> None:
     os.chdir(working_directory)
 
 
-def get_loader_for(
-    url: URL, session: aiohttp.ClientSession
-) -> (MainPageLoader, ChapterLoader):
-    logger.debug(f"get {url.host=}")
-    image_loader = BasicLoader(session)
-    match url.host:
-        case "tl.rulate.ru":
-            return TlRulateLoader(
-                url,
-                session,
-                image_loader,
-            ), TlRulateChapterLoader(session, image_loader)
-        case "renovels.org":
-            return RenovelsLoader(
-                url,
-                session,
-                image_loader,
-            ), RenovelsChapterLoader(session)
-        case _:
-            raise FindLoaderException(url)
-
-
-def get_saver_by_name(saver_name: str) -> type:
-    for saver in inheritors(Saver):
-        if saver.__name__ == saver_name:
-            return saver
-    raise FindSaverException(saver_name)
-
-
-def parse_console_arguments() -> Config:
+def parse_console_arguments() -> Settings:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "url",
@@ -114,12 +58,13 @@ def parse_console_arguments() -> Config:
         "--working-directory",
         help="working directory for program",
         type=Path,
+        default=Path("."),
     )
     parser.add_argument(
         "-s",
         "--saver",
         help="select saver (default EbookSaver)",
-        choices=[i.__name__ for i in inheritors(Saver)],
+        choices=[i.__name__ for i in get_all_saver_classes()],
         default="EbookSaver",
     )
     args = parser.parse_args()
@@ -127,12 +72,14 @@ def parse_console_arguments() -> Config:
         args.from_ = float("-inf")
     if not args.to:
         args.to = float("inf")
-    trim_args = TrimConfig(from_=args.from_, to=args.to, interactive=args.interactive)
+    args.saver = get_saver_by_name(args.saver)
 
-    return Config(
+    trim_args = TrimSettings(to=args.to, from_=args.from_, interactive=args.interactive)
+
+    return Settings(
         chunk_size=args.chunk_size,
         url=args.url,
-        saver=get_saver_by_name(args.saver),
+        saver=args.saver,
         working_directory=args.working_directory,
         trim_args=trim_args,
     )

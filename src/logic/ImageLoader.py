@@ -12,12 +12,13 @@ from general.exceptions.Raiser import HttpError
 
 class ImageLoader(ABC):
     @abstractmethod
-    async def load_image(self, image: Image) -> LoadedImage | None: ...
+    async def load_image(
+        self, image: Image, session: aiohttp.ClientSession
+    ) -> LoadedImage | None: ...
 
 
 @dataclass
 class BasicLoader(ImageLoader):
-    session: aiohttp.ClientSession
     headers: dict = field(
         default_factory=lambda: {
             "accept-encoding": "gzip",
@@ -38,9 +39,11 @@ class BasicLoader(ImageLoader):
     )
 
     @override
-    async def load_image(self, image: Image) -> LoadedImage | None:
+    async def load_image(
+        self, image: Image, session: aiohttp.ClientSession
+    ) -> LoadedImage | None:
         url = image.url
-        async with self.session.get(url, headers=self.headers) as r:
+        async with session.get(url, headers=self.headers) as r:
             try:
                 Raiser.check_response(r)
             except HttpError as e:

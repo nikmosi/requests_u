@@ -1,77 +1,24 @@
 import asyncio
 import contextlib
-import subprocess as sb
-from collections.abc import Iterable
 from dataclasses import dataclass
 from itertools import batched
-from typing import Any
 
 import aiohttp
+from dependency_injector.wiring import Provide, inject
 from loguru import logger
 
+from config.data import Settings
+from containers import Container, LoaderService, SessionService
 from domain.entities.chapters import Chapter
 from domain.entities.saver_context import SaverContext
 from general.helpers import (
     change_working_directory,
-    get_loader_for,
     parse_console_arguments,
 )
 from logic.ChapterLoader import ChapterLoader
+from logic.MainPageLoader import MainPageLoader
 from logic.Saver import Saver
-from settings.config import Config, TrimConfig
-
-
-def trim(args: TrimConfig, chapters: Iterable[Chapter]) -> Iterable[Chapter]:
-    if args.interactive:
-        return interactive_trim(chapters)
-    else:
-        return in_bound_trim(chapters, args.from_, args.to)
-
-
-def in_bound_trim(
-    chapters: Iterable[Chapter], start: float, end: float
-) -> Iterable[Chapter]:
-    for i, chapter in enumerate(chapters, 1):
-        in_bound = start <= i <= end
-        if in_bound:
-            yield chapter
-
-
-def interactive_trim(chapters: Iterable[Chapter]) -> Iterable[Chapter]:
-    chapters_list = list(chapters)
-    base_names = [i.base_name for i in chapters_list]
-
-    # TODO: raise exceptions in len
-    from_name = fzf_filter(base_names, "From chapter...")
-    if len(from_name) == 0:
-        logger.error("get empty from chapter.")
-        exit(1)
-    to_name = fzf_filter(base_names, "To chapter...")
-    if len(to_name) == 0:
-        logger.error("get empty to chapter.")
-        exit(1)
-
-    logger.debug(f"{from_name=}, {to_name=}")
-
-    from_index = base_names.index(from_name)
-    to_index = base_names.index(to_name)
-
-    if from_index > to_index:
-        logger.error(f"{from_index=} more than {to_index=}")
-
-    return chapters_list[from_index : to_index + 1]
-
-
-def fzf_filter(data: Iterable[Any], placeholder: str = "Filter...") -> str:
-    input_data = "\n".join(map(str, data))
-    selected_item = sb.check_output(
-        f"fzf --color=16 --prompt='{placeholder} > '",
-        input=input_data,
-        text=True,
-        shell=True,
-    ).strip()
-    logger.debug(f"{selected_item=}")
-    return selected_item
+from utils import trim
 
 
 @dataclass
@@ -86,9 +33,13 @@ class ChapterHandler:
 
 
 @logger.catch
-async def run(session: aiohttp.ClientSession, args: Config):
-    main_page_loader, chapter_loader = get_loader_for(args.url, session)
-    main_page = await main_page_loader.get_main_page()
+async def run(
+    args: Settings,
+    main_page_loader: MainPageLoader,
+    chapter_loader: ChapterLoader,
+    session: aiohttp.ClientSession,
+):
+    main_page = await main_page_loader.get(session)
     trimmed_chapters = trim(args.trim_args, main_page.chapters)
     saver_context = SaverContext(
         title=main_page.title, language="ru", covers=main_page.covers
@@ -102,16 +53,24 @@ async def run(session: aiohttp.ClientSession, args: Config):
                     tg.create_task(chapter_handler.handle(chapter))
 
 
-async def main():
+@inject
+async def main(
+    session_service: SessionService = Provide[Container.session_service],
+    loader_service: LoaderService = Provide[Container.loader_service],
+):
     logger.debug("run")
     args = parse_console_arguments()
     change_working_directory(args.working_directory)
-    cookies = {"mature": "c3a2ed4b199a1a15f5a5483504c7a75a7030dc4bi%3A1%3B"}
-    async with aiohttp.ClientSession(cookies=cookies) as session:
-        await run(session, args)
+    loader = loader_service.get(args.url)
+    async with session_service.get() as session:
+        chapter_loader = loader.get_loader_for_chapter(session)
+        await run(args, loader, chapter_loader, session)
     logger.info("done")
 
 
 if __name__ == "__main__":
     contextlib.suppress(KeyboardInterrupt)
+    container = Container()
+    container.init_resources()
+    container.wire(modules=[__name__])
     asyncio.run(main())

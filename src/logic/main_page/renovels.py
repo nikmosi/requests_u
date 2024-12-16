@@ -1,21 +1,47 @@
 import asyncio
 import json
 from collections.abc import Sequence
+from dataclasses import asdict, dataclass
 from typing import override
 
+import aiohttp
+from bs4 import BeautifulSoup
+from loguru import logger
 from yarl import URL
 
-from domain.entities.chapters import Chapter
+from domain.entities.chapters import Chapter, LoadedChapter
 from domain.entities.images import Image
 from domain.entities.main_page import MainPageInfo
 from general.bs4_helpers import get_soup, get_text_response
+from logic.ChapterLoader import ChapterLoader
 from logic.MainPageLoader import MainPageLoader
+
+
+@dataclass(eq=False)
+class RenovelsChapterLoader(ChapterLoader):
+    @override
+    async def load_chapter(self, chapter: Chapter) -> LoadedChapter:
+        res = json.loads(await get_text_response(self.session, chapter.url))
+        logger.debug(f"get {chapter.base_name}")
+        content = res["content"]
+        title = content["chapter"]
+        content_p = content["content"]
+        html = BeautifulSoup(content_p, "lxml").find_all("p")
+        paragraphs = [i.text for i in html]
+
+        return LoadedChapter(
+            **asdict(chapter), title=title, images=[], paragraphs=paragraphs
+        )
 
 
 class RenovelsLoader(MainPageLoader):
     @override
-    async def get_main_page(self) -> MainPageInfo:
-        main_page_soup = await get_soup(self.session, self.url)
+    def get_loader_for_chapter(self, session: aiohttp.ClientSession) -> ChapterLoader:
+        return RenovelsChapterLoader(session)
+
+    @override
+    async def get(self, session: aiohttp.ClientSession) -> MainPageInfo:
+        main_page_soup = await get_soup(session, self.url)
         scripts = main_page_soup.find(id="__NEXT_DATA__")
         if scripts is None:
             raise Exception("can't get __NEXT_DATA__.")
@@ -29,18 +55,18 @@ class RenovelsLoader(MainPageLoader):
 
         title = content["main_name"]
         image = Image(self.domain.with_path(img_path))
-        cover = await self.image_loader.load_image(image)
+        cover = await self.image_loader.load_image(image, session)
 
         covers = [cover] if cover is not None else []
 
         return MainPageInfo(
-            chapters=await self.collect_chapters(branch_id, count_chapters),
+            chapters=await self.collect_chapters(branch_id, count_chapters, session),
             title=title,
             covers=covers,
         )
 
     async def collect_chapters(
-        self, branch: int, count_chapters: int
+        self, branch: int, count_chapters: int, session: aiohttp.ClientSession
     ) -> Sequence[Chapter]:
         count = 20
         url = URL(
@@ -52,7 +78,7 @@ class RenovelsLoader(MainPageLoader):
                 tasks.append(
                     tg.create_task(
                         get_text_response(
-                            self.session, url % {"count": count, "page": page + 1}
+                            session, url % {"count": count, "page": page + 1}
                         )
                     )
                 )

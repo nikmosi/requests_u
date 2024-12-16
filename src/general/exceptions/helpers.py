@@ -22,12 +22,3 @@ class DirectoryPlaceTakenByFileException(GeneralException):
     @property
     def message(self):
         return f"{self.path=} taken by file. Can't create directory"
-
-
-@dataclass
-class FindSaverException(GeneralException):
-    saver_name: str
-
-    @property
-    def message(self):
-        return f"Can't find saver with name {self.saver_name=}"

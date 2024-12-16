@@ -12,6 +12,9 @@ class Chapter:
     name: str
     url: URL
 
+    def __str__(self) -> str:
+        return self.base_name
+
     @property
     def base_name(self) -> str:
         return f"{self.id}. {self.name}"

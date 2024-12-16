@@ -1,19 +1,57 @@
+import asyncio
 import operator
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import override
 
+import aiohttp
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from loguru import logger
 from yarl import URL
 
 import general.Raiser as Raiser
-from domain.entities.chapters import Chapter
+from domain.entities.chapters import Chapter, LoadedChapter
 from domain.entities.images import Image, LoadedImage
 from domain.entities.main_page import MainPageInfo
 from general.bs4_helpers import get_soup
+from logic.ChapterLoader import ChapterLoader
+from logic.ImageLoader import ImageLoader
 from logic.MainPageLoader import MainPageLoader
+
+
+@dataclass(eq=False)
+class TlRulateChapterLoader(ChapterLoader):
+    image_loader: ImageLoader
+
+    @override
+    async def load_chapter(self, chapter: Chapter) -> LoadedChapter:
+        soup = await get_soup(self.session, chapter.url)
+
+        text_container = TextContainerParser(soup).parse()
+        image_urls = text_container.image_urls
+        image_urls = list(map(lambda i: self.normalize_url(i, chapter.url), image_urls))
+        images = await self.load_images_by_urls(image_urls)
+
+        return LoadedChapter(
+            **asdict(chapter),
+            title=text_container.title,
+            paragraphs=text_container.paragraphs,
+            images=images,
+        )
+
+    def normalize_url(self, url: URL, domain: URL) -> URL:
+        if url.is_absolute():
+            return url
+        return domain.with_path(url.path)
+
+    async def load_images_by_urls(self, urls: Sequence[URL]) -> Sequence[LoadedImage]:
+        tasks = []
+        async with asyncio.TaskGroup() as tg:
+            for url in urls:
+                image = Image(url)
+                tasks.append(tg.create_task(self.image_loader.load_image(image)))
+        return list(filter(None, map(operator.methodcaller("result"), tasks)))
 
 
 @dataclass
@@ -77,8 +115,12 @@ class TextContainerParser:
 
 class TlRulateLoader(MainPageLoader):
     @override
-    async def get_main_page(self) -> MainPageInfo:
-        main_page_soup = await get_soup(self.session, self.url)
+    def get_loader_for_chapter(self, session: aiohttp.ClientSession) -> ChapterLoader:
+        return TlRulateChapterLoader(session, self.image_loader)
+
+    @override
+    async def get(self, session: aiohttp.ClientSession) -> MainPageInfo:
+        main_page_soup = await get_soup(session, self.url)
         logger.debug("getting chapters url")
         chapter_rows = main_page_soup.find_all(class_="chapter_row")
         title = (
@@ -92,7 +134,7 @@ class TlRulateLoader(MainPageLoader):
             logger.error(msg)
             exit(msg)
 
-        covers = await self.get_covers(main_page_soup)
+        covers = await self.get_covers(main_page_soup, session)
         chapters = self.to_chapters(chapter_rows)
 
         return MainPageInfo(
@@ -101,7 +143,9 @@ class TlRulateLoader(MainPageLoader):
             covers=covers,
         )
 
-    async def get_covers(self, main_page_soup: Tag) -> Sequence[LoadedImage]:
+    async def get_covers(
+        self, main_page_soup: Tag, session: aiohttp.ClientSession
+    ) -> Sequence[LoadedImage]:
         logger.debug("loading covers")
         container = main_page_soup.find(class_="images")
         if not isinstance(container, Tag):
@@ -112,7 +156,7 @@ class TlRulateLoader(MainPageLoader):
         images = []
         for i in image_urls:
             image = Image(url=i)
-            images.append(await self.image_loader.load_image(image))
+            images.append(await self.image_loader.load_image(image, session))
         logger.debug(f"load {len(images)} covers")
         return images
 

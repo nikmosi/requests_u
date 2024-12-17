@@ -10,10 +10,10 @@ from dependency_injector import containers, providers
 from loguru import logger
 from yarl import URL
 
-from logic.ImageLoader import BasicLoader, ImageLoader
+from core import ImageLoader, MainPageLoader
+from logic.loader import BasicImageLoader
 from logic.main_page.renovels import RenovelsLoader
 from logic.main_page.tlrulate import TlRulateLoader
-from logic.MainPageLoader import MainPageLoader
 
 
 @dataclass()
@@ -51,6 +51,6 @@ class LoaderService:
 
 
 class Container(containers.DeclarativeContainer):
-    image_loader = BasicLoader()
+    image_loader = BasicImageLoader()
     loader_service = providers.Singleton(LoaderService, image_loader=image_loader)
     session = providers.Resource(init_session)

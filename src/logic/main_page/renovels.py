@@ -8,12 +8,9 @@ from bs4 import BeautifulSoup
 from loguru import logger
 from yarl import URL
 
-from domain.entities.chapters import Chapter, LoadedChapter
-from domain.entities.images import Image
-from domain.entities.main_page import MainPageInfo
-from general.bs4_helpers import get_soup, get_text_response
-from logic.ChapterLoader import ChapterLoader
-from logic.MainPageLoader import MainPageLoader
+from core import ChapterLoader, MainPageLoader
+from domain import Chapter, Image, LoadedChapter, MainPageInfo
+from utils.bs4 import get_soup, get_text_response
 
 
 @dataclass(eq=False)

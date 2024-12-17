@@ -9,13 +9,9 @@ from bs4.element import Tag
 from loguru import logger
 from yarl import URL
 
-from domain.entities.chapters import Chapter, LoadedChapter
-from domain.entities.images import Image, LoadedImage
-from domain.entities.main_page import MainPageInfo
-from general.bs4_helpers import get_soup
-from logic.ChapterLoader import ChapterLoader
-from logic.ImageLoader import ImageLoader
-from logic.MainPageLoader import MainPageLoader
+from core import ChapterLoader, ImageLoader, MainPageLoader
+from domain import Chapter, Image, LoadedChapter, LoadedImage, MainPageInfo
+from utils.bs4 import get_soup
 
 
 @dataclass(eq=False)

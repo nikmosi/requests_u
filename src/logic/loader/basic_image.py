@@ -1,25 +1,12 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from http import HTTPStatus
 from typing import override
 
-import aiohttp
-
-from domain.entities.images import Image, LoadedImage
-from general.exceptions.Raiser import HttpError
-
-
-class ImageLoader(ABC):
-    def __init__(self, session: aiohttp.ClientSession) -> None:
-        self.session = session
-        super().__init__()
-
-    @abstractmethod
-    async def load_image(self, image: Image) -> LoadedImage | None: ...
+from core import ImageLoader
+from domain import Image, LoadedImage
 
 
 @dataclass
-class BasicLoader(ImageLoader):
+class BasicImageLoader(ImageLoader):
     headers: dict = field(
         default_factory=lambda: {
             "accept-encoding": "gzip",
@@ -43,10 +30,5 @@ class BasicLoader(ImageLoader):
     async def load_image(self, image: Image) -> LoadedImage | None:
         url = image.url
         async with self.session.get(url, headers=self.headers) as r:
-            try:
-                r.raise_for_status()
-            except HttpError as e:
-                if e.status == HTTPStatus.NOT_FOUND:
-                    return
-                raise e
+            r.raise_for_status()
             return LoadedImage(url=url, data=await r.read())

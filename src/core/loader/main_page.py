@@ -3,9 +3,10 @@ from abc import ABC, abstractmethod
 import aiohttp
 from yarl import URL
 
-from domain.entities.main_page import MainPageInfo
-from logic.ChapterLoader import ChapterLoader
-from logic.ImageLoader import ImageLoader
+from domain import MainPageInfo
+
+from .chapter import ChapterLoader
+from .image import ImageLoader
 
 
 class MainPageLoader(ABC):
@@ -21,7 +22,9 @@ class MainPageLoader(ABC):
         self.session = session
 
     @abstractmethod
-    async def load(self) -> MainPageInfo: ...
+    async def load(self) -> MainPageInfo:
+        raise NotImplementedError
 
     @abstractmethod
-    def get_loader_for_chapter(self) -> ChapterLoader: ...
+    def get_loader_for_chapter(self) -> ChapterLoader:
+        raise NotImplementedError

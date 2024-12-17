@@ -6,13 +6,10 @@ from dependency_injector.wiring import Provide, inject
 from loguru import logger
 from pipe import batched
 
-from config.data import Settings
+from config import Settings
 from containers import Container, LoaderService
-from domain.entities.chapters import Chapter
-from domain.entities.saver_context import SaverContext
-from logic.ChapterLoader import ChapterLoader
-from logic.MainPageLoader import MainPageLoader
-from logic.Saver import Saver
+from core import ChapterLoader, MainPageLoader, Saver
+from domain import Chapter, SaverContext
 from utils import (
     change_working_directory,
     parse_console_arguments,

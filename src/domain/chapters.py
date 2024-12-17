@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from yarl import URL
 
-from domain.entities.images import LoadedImage
+from domain.images import LoadedImage
 
 
 @dataclass(frozen=True, slots=True)

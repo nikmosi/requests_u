@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from domain.entities.chapters import Chapter
-from domain.entities.images import LoadedImage
+from domain.chapters import Chapter
+from domain.images import LoadedImage
 
 
 @dataclass

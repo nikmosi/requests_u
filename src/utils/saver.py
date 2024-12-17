@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from logic import Saver
+from core import Saver
 
 from .exceptions import FindSaverException
 

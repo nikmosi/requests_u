@@ -13,15 +13,15 @@ class MainPageLoader(ABC):
         self,
         url: URL,
         image_loader: ImageLoader,
+        session: aiohttp.ClientSession,
     ) -> None:
         self.url = url
         self.domain = url.with_path("")
         self.image_loader = image_loader
+        self.session = session
 
     @abstractmethod
-    async def get(self, session: aiohttp.ClientSession) -> MainPageInfo: ...
+    async def load(self) -> MainPageInfo: ...
 
     @abstractmethod
-    def get_loader_for_chapter(
-        self, session: aiohttp.ClientSession
-    ) -> ChapterLoader: ...
+    def get_loader_for_chapter(self) -> ChapterLoader: ...

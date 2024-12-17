@@ -2,15 +2,13 @@ import asyncio
 import operator
 from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
-from typing import override
+from typing import cast, override
 
-import aiohttp
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from loguru import logger
 from yarl import URL
 
-import general.Raiser as Raiser
 from domain.entities.chapters import Chapter, LoadedChapter
 from domain.entities.images import Image, LoadedImage
 from domain.entities.main_page import MainPageInfo
@@ -87,20 +85,20 @@ class TextContainerParser:
     def text_container(self) -> Tag:
         class_ = id_name = "text-container"
         text_container = self.soup.find("div", id=id_name, class_=class_)
-        return Raiser.check_on_tag(text_container)
+        return cast(Tag, text_container)
 
     @property
     def title(self) -> str:
         title = self.text_container.find("h1")
         assert title is not None
-        Raiser.check_on_tag(title)
+        cast(Tag, title)
         return title.text
 
     @property
     def context_text(self) -> Tag:
         class_ = "content-text"
         context_text = self.text_container.find("div", class_=class_)
-        return Raiser.check_on_tag(context_text)
+        return cast(Tag, context_text)
 
     @property
     def paragraphs(self) -> Sequence[str]:
@@ -115,12 +113,12 @@ class TextContainerParser:
 
 class TlRulateLoader(MainPageLoader):
     @override
-    def get_loader_for_chapter(self, session: aiohttp.ClientSession) -> ChapterLoader:
-        return TlRulateChapterLoader(session, self.image_loader)
+    def get_loader_for_chapter(self) -> ChapterLoader:
+        return TlRulateChapterLoader(self.session, self.image_loader)
 
     @override
-    async def get(self, session: aiohttp.ClientSession) -> MainPageInfo:
-        main_page_soup = await get_soup(session, self.url)
+    async def load(self) -> MainPageInfo:
+        main_page_soup = await get_soup(self.session, self.url)
         logger.debug("getting chapters url")
         chapter_rows = main_page_soup.find_all(class_="chapter_row")
         title = (
@@ -134,7 +132,7 @@ class TlRulateLoader(MainPageLoader):
             logger.error(msg)
             exit(msg)
 
-        covers = await self.get_covers(main_page_soup, session)
+        covers = await self.get_covers(main_page_soup)
         chapters = self.to_chapters(chapter_rows)
 
         return MainPageInfo(
@@ -143,9 +141,7 @@ class TlRulateLoader(MainPageLoader):
             covers=covers,
         )
 
-    async def get_covers(
-        self, main_page_soup: Tag, session: aiohttp.ClientSession
-    ) -> Sequence[LoadedImage]:
+    async def get_covers(self, main_page_soup: Tag) -> Sequence[LoadedImage]:
         logger.debug("loading covers")
         container = main_page_soup.find(class_="images")
         if not isinstance(container, Tag):
@@ -156,15 +152,15 @@ class TlRulateLoader(MainPageLoader):
         images = []
         for i in image_urls:
             image = Image(url=i)
-            images.append(await self.image_loader.load_image(image, session))
+            images.append(await self.image_loader.load_image(image))
         logger.debug(f"load {len(images)} covers")
         return images
 
     def to_chapters(self, rows: Iterable[Tag]):
         for index, row in enumerate(rows, 1):
             if PreParsedChapter(row).can_read:
-                a = Raiser.check_on_tag(row.find_next("a"))
-                href = Raiser.check_on_str(a.get("href"))
+                a = cast(Tag, row.find_next("a"))
+                href = cast(str, a.get("href"))
                 url = self.domain.with_path(href)
                 name = a.text
                 yield Chapter(id=index, name=name, url=url)

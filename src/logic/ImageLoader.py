@@ -5,16 +5,17 @@ from typing import override
 
 import aiohttp
 
-import general.Raiser as Raiser
 from domain.entities.images import Image, LoadedImage
 from general.exceptions.Raiser import HttpError
 
 
 class ImageLoader(ABC):
+    def __init__(self, session: aiohttp.ClientSession) -> None:
+        self.session = session
+        super().__init__()
+
     @abstractmethod
-    async def load_image(
-        self, image: Image, session: aiohttp.ClientSession
-    ) -> LoadedImage | None: ...
+    async def load_image(self, image: Image) -> LoadedImage | None: ...
 
 
 @dataclass
@@ -39,13 +40,11 @@ class BasicLoader(ImageLoader):
     )
 
     @override
-    async def load_image(
-        self, image: Image, session: aiohttp.ClientSession
-    ) -> LoadedImage | None:
+    async def load_image(self, image: Image) -> LoadedImage | None:
         url = image.url
-        async with session.get(url, headers=self.headers) as r:
+        async with self.session.get(url, headers=self.headers) as r:
             try:
-                Raiser.check_response(r)
+                r.raise_for_status()
             except HttpError as e:
                 if e.status == HTTPStatus.NOT_FOUND:
                     return

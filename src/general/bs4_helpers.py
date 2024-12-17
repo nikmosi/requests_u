@@ -4,8 +4,6 @@ from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 from yarl import URL
 
-import general.Raiser as Raiser
-
 
 async def get_soup(session: aiohttp.ClientSession, url: URL) -> BeautifulSoup:
     html = await get_html(session, url)
@@ -14,7 +12,7 @@ async def get_soup(session: aiohttp.ClientSession, url: URL) -> BeautifulSoup:
 
 async def get_html(session: aiohttp.ClientSession, url: URL) -> str:
     async with session.get(url=url, headers=get_headers()) as r:
-        Raiser.check_response(r)
+        r.raise_for_status()
         return await r.text()
 
 
@@ -29,5 +27,5 @@ def get_headers() -> dict:
 
 async def get_text_response(session: ClientSession, url: URL):
     async with session.get(url) as r:
-        Raiser.check_response(r)
+        r.raise_for_status()
         return await r.text()

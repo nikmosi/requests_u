@@ -4,7 +4,6 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from typing import override
 
-import aiohttp
 from bs4 import BeautifulSoup
 from loguru import logger
 from yarl import URL
@@ -36,12 +35,12 @@ class RenovelsChapterLoader(ChapterLoader):
 
 class RenovelsLoader(MainPageLoader):
     @override
-    def get_loader_for_chapter(self, session: aiohttp.ClientSession) -> ChapterLoader:
-        return RenovelsChapterLoader(session)
+    def get_loader_for_chapter(self) -> ChapterLoader:
+        return RenovelsChapterLoader(self.session)
 
     @override
-    async def get(self, session: aiohttp.ClientSession) -> MainPageInfo:
-        main_page_soup = await get_soup(session, self.url)
+    async def load(self) -> MainPageInfo:
+        main_page_soup = await get_soup(self.session, self.url)
         scripts = main_page_soup.find(id="__NEXT_DATA__")
         if scripts is None:
             raise Exception("can't get __NEXT_DATA__.")
@@ -55,18 +54,18 @@ class RenovelsLoader(MainPageLoader):
 
         title = content["main_name"]
         image = Image(self.domain.with_path(img_path))
-        cover = await self.image_loader.load_image(image, session)
+        cover = await self.image_loader.load_image(image)
 
         covers = [cover] if cover is not None else []
 
         return MainPageInfo(
-            chapters=await self.collect_chapters(branch_id, count_chapters, session),
+            chapters=await self.collect_chapters(branch_id, count_chapters),
             title=title,
             covers=covers,
         )
 
     async def collect_chapters(
-        self, branch: int, count_chapters: int, session: aiohttp.ClientSession
+        self, branch: int, count_chapters: int
     ) -> Sequence[Chapter]:
         count = 20
         url = URL(
@@ -78,7 +77,7 @@ class RenovelsLoader(MainPageLoader):
                 tasks.append(
                     tg.create_task(
                         get_text_response(
-                            session, url % {"count": count, "page": page + 1}
+                            self.session, url % {"count": count, "page": page + 1}
                         )
                     )
                 )

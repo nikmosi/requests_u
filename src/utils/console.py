@@ -1,22 +1,10 @@
 import argparse
-import os
 from pathlib import Path
 
 from yarl import URL
 
 from config import Settings, TrimSettings
-from general.exceptions.helpers import (
-    DirectoryPlaceTakenByFileException,
-)
-from utils import get_all_saver_classes, get_saver_by_name
-
-
-def change_working_directory(working_directory: Path) -> None:
-    if not working_directory.exists():
-        os.mkdir(working_directory)
-    if not working_directory.is_dir():
-        raise DirectoryPlaceTakenByFileException(working_directory)
-    os.chdir(working_directory)
+from utils.saver import get_all_saver_classes, get_saver_by_name
 
 
 def parse_console_arguments() -> Settings:

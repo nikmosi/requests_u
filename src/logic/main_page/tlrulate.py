@@ -7,6 +7,9 @@ from typing import cast, override
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from loguru import logger
+from pipe import filter as pfilter
+from pipe import map as pmap
+from whatever import _
 from yarl import URL
 
 from core import ChapterLoader, ImageLoader, MainPageLoader
@@ -23,9 +26,11 @@ class TlRulateChapterLoader(ChapterLoader):
         soup = await get_soup(self.session, chapter.url)
 
         text_container = TextContainerParser(soup).parse()
-        image_urls = text_container.image_urls
-        image_urls = list(map(lambda i: self.normalize_url(i, chapter.url), image_urls))
-        images = await self.load_images_by_urls(image_urls)
+        image_urls = set(text_container.image_urls)
+        relative_urls = set(image_urls | pfilter(not _.is_absolute()))
+        absolute_urls = list(image_urls - relative_urls)
+        absolute_urls += [self.add_domain(i, chapter.url) for i in relative_urls]
+        images = await self.load_images_by_urls(absolute_urls)
 
         return LoadedChapter(
             **asdict(chapter),
@@ -34,7 +39,7 @@ class TlRulateChapterLoader(ChapterLoader):
             images=images,
         )
 
-    def normalize_url(self, url: URL, domain: URL) -> URL:
+    def add_domain(self, url: URL, domain: URL) -> URL:
         if url.is_absolute():
             return url
         return domain.with_path(url.path)
@@ -45,7 +50,7 @@ class TlRulateChapterLoader(ChapterLoader):
             for url in urls:
                 image = Image(url)
                 tasks.append(tg.create_task(self.image_loader.load_image(image)))
-        return list(filter(None, map(operator.methodcaller("result"), tasks)))
+        return list(tasks | pmap(operator.methodcaller("result")) | pfilter(None))
 
 
 @dataclass

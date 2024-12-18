@@ -43,6 +43,7 @@ class RenovelsLoader(MainPageLoader):
             raise Exception("can't get __NEXT_DATA__.")
         data = json.loads(scripts.get_text())
 
+        # TODO: create model for response
         content = data["props"]["pageProps"]["fallbackData"]["content"]
         branches = content["branches"][0]
         img_path = content["img"]["high"]

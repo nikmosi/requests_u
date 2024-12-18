@@ -1,6 +1,5 @@
 import asyncio
 import contextlib
-from dataclasses import dataclass
 
 from dependency_injector.wiring import Provide, inject
 from loguru import logger
@@ -8,24 +7,13 @@ from pipe import batched
 
 from config import Settings
 from containers import Container, LoaderService
-from core import ChapterLoader, MainPageLoader, Saver
-from domain import Chapter, SaverContext
+from core import ChapterLoader, MainPageLoader, SaverLoaderConnector
+from domain import SaverContext
 from utils import (
     change_working_directory,
     parse_console_arguments,
     trim,
 )
-
-
-@dataclass
-class ChapterHandler:
-    saver: Saver
-    chapter_loader: ChapterLoader
-
-    async def handle(self, chapter: Chapter):
-        logger.debug(f"{chapter.base_name}")
-        loaded_chapter = await self.chapter_loader.load_chapter(chapter)
-        await self.saver.save_chapter(loaded_chapter)
 
 
 @logger.catch
@@ -40,12 +28,12 @@ async def run(
         title=main_page.title, language="ru", covers=main_page.covers
     )
 
-    with args.saver(saver_context) as s:
-        chapter_handler = ChapterHandler(s, chapter_loader)
+    with args.saver(saver_context) as saver:
+        connector = SaverLoaderConnector(saver, chapter_loader)
         for chunked in trimmed_chapters | batched(args.chunk_size):
             async with asyncio.TaskGroup() as tg:
                 for chapter in chunked:
-                    tg.create_task(chapter_handler.handle(chapter))
+                    tg.create_task(connector.handle(chapter))
 
 
 @inject

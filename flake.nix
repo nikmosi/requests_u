@@ -2,6 +2,7 @@
   description = "An example project.";
 
   inputs.pre-commit-hooks.url = "github:cachix/git-hooks.nix";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
 
   outputs =
     { self, nixpkgs, ... }@inputs:
@@ -37,14 +38,22 @@
         };
       });
 
-      devShells = forAllSystems (system: {
-        default = nixpkgs.legacyPackages.${system}.mkShell {
-          buildInputs = self.checks.${system}.pre-commit-check.enabledPackages;
-          shellHook = ''
-            ${self.checks.${system}.pre-commit-check.shellHook}
-            exec fish
-          '';
-        };
-      });
+      devShells = forAllSystems (
+        system:
+
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in
+        {
+          default = nixpkgs.legacyPackages.${system}.mkShell {
+            buildInputs = self.checks.${system}.pre-commit-check.enabledPackages;
+            packages = with pkgs; [ pdm ];
+            shellHook = ''
+              ${self.checks.${system}.pre-commit-check.shellHook}
+              exec fish
+            '';
+          };
+        }
+      );
     };
 }

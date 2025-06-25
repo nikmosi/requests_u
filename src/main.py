@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+from collections.abc import Awaitable
 
 from dependency_injector.wiring import Provide, inject
 from loguru import logger
@@ -49,9 +50,16 @@ async def main(
     logger.info("done")
 
 
+async def middleware():
+    logger.debug("start")
+    container = Container()
+    c = container.init_resources()
+    if isinstance(c, Awaitable):
+        await c
+    container.wire(modules=[__name__])
+    await main()
+
+
 if __name__ == "__main__":
     contextlib.suppress(KeyboardInterrupt)
-    container = Container()
-    container.init_resources()
-    container.wire(modules=[__name__])
-    asyncio.run(main())
+    asyncio.run(middleware())

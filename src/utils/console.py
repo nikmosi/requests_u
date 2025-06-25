@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 
+from loguru import logger
 from yarl import URL
 
 from config import Settings, TrimSettings
@@ -64,10 +65,13 @@ def parse_console_arguments() -> Settings:
 
     trim_args = TrimSettings(to=args.to, from_=args.from_, interactive=args.interactive)
 
-    return Settings(
+    settings_parsed = Settings(
         chunk_size=args.chunk_size,
         url=args.url,
         saver=args.saver,
         working_directory=args.working_directory,
         trim_args=trim_args,
     )
+    logger.debug(settings_parsed)
+
+    return settings_parsed

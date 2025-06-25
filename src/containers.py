@@ -26,7 +26,7 @@ class FindLoaderException(Exception):
 
 
 @asynccontextmanager
-async def init_session() -> AsyncGenerator[ClientSession]:
+async def init_session() -> AsyncGenerator[ClientSession, None]:
     cookies = {"mature": "c3a2ed4b199a1a15f5a5483504c7a75a7030dc4bi%3A1%3B"}
     async with aiohttp.ClientSession(cookies=cookies) as session:
         yield session
@@ -51,6 +51,10 @@ class LoaderService:
 
 
 class Container(containers.DeclarativeContainer):
-    image_loader = BasicImageLoader()
-    loader_service = providers.Singleton(LoaderService, image_loader=image_loader)
-    session = providers.Resource(init_session)
+    session: providers.Resource[ClientSession] = providers.Resource(init_session)
+    image_loader: providers.Singleton[ImageLoader] = providers.Singleton(
+        BasicImageLoader, session
+    )
+    loader_service = providers.Singleton(
+        LoaderService, image_loader=image_loader, session=session
+    )

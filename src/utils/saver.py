@@ -1,11 +1,14 @@
 from collections.abc import Iterable
 
 from core import Saver
+from logic.saver import EbookSaver, FilesSaver
 
 from .exceptions import FindSaverException
 
 
 def inheritors(klass: type) -> set[type]:
+    wow = [EbookSaver.__name__, FilesSaver.__name__]
+    wow = str(wow)
     subclasses = set()
     work = [klass]
     while work:

@@ -37,6 +37,9 @@ pythonpath = [
   "src"
 ]
 addopts = "--timeout 300 -v -s --strict-markers -ra"
+markers = [
+  "asyncio: mark test as using asyncio",
+]
 
 [build-system]
 requires = ["pdm-backend"]

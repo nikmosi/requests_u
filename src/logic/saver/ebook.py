@@ -64,7 +64,7 @@ class EbookSaver(Saver):
         paths = self.add_images_to_book(
             chapter_id=loaded_chapter.id, images=loaded_chapter.images
         )
-        paths = [".." / path for path in paths]
+        paths = [(Path("..") / path) for path in paths]
         html.set_content(
             f"<html><body><p>{loaded_chapter.title}</p><br/>{self.get_paragraph_html(loaded_chapter)}{self.get_images_html(paths)}</html>"
         )
@@ -78,10 +78,15 @@ class EbookSaver(Saver):
 
     def get_images_html(
         self,
-        paths: Iterable[Path],
+        paths: Iterable[Path | str],
         prefix: str = "<h1>Images</h1>",
     ):
-        html = "".join(f'<img src="{i}" alt="dead image----" />' for i in paths)
+        serialized_paths = [
+            path.as_posix() if isinstance(path, Path) else str(path) for path in paths
+        ]
+        html = "".join(
+            f'<img src="{i}" alt="dead image----" />' for i in serialized_paths
+        )
 
         return prefix + html if len(html) > 0 else ""
 

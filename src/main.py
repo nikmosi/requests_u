@@ -56,8 +56,13 @@ async def middleware():
     c = container.init_resources()
     if isinstance(c, Awaitable):
         await c
-    container.wire(modules=[__name__])
-    await main()
+    try:
+        container.wire(modules=[__name__])
+        await main()
+    finally:
+        shutdown = container.shutdown_resources()
+        if isinstance(shutdown, Awaitable):
+            await shutdown
 
 
 if __name__ == "__main__":

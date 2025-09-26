@@ -6,14 +6,17 @@ from dataclasses import dataclass
 
 import aiohttp
 from aiohttp.client import ClientSession
+from aiolimiter import AsyncLimiter
 from dependency_injector import containers, providers
 from loguru import logger
 from yarl import URL
 
+from config.data import LimiterSettings, Settings
 from core import ImageLoader, MainPageLoader
 from logic.loader import BasicImageLoader
 from logic.main_page.renovels import RenovelsLoader
 from logic.main_page.tlrulate import TlRulateLoader
+from utils.console import parse_console_arguments
 
 
 @dataclass()
@@ -50,11 +53,20 @@ class LoaderService:
         return parser(url, self.image_loader, self.session)
 
 
+def setup_limiter(settings: LimiterSettings) -> AsyncLimiter:
+    return AsyncLimiter(settings.max_rate, settings.time_period)
+
+
 class Container(containers.DeclarativeContainer):
+    settings: providers.Resource[Settings] = providers.Resource(parse_console_arguments)
     session: providers.Resource[ClientSession] = providers.Resource(init_session)
     image_loader: providers.Singleton[ImageLoader] = providers.Singleton(
         BasicImageLoader, session
     )
     loader_service = providers.Singleton(
         LoaderService, image_loader=image_loader, session=session
+    )
+
+    limiter: providers.Singleton[AsyncLimiter] = providers.Singleton(
+        setup_limiter, settings.provided.limiter
     )

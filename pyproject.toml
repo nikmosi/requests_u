@@ -21,6 +21,7 @@ dependencies = [
     "whatever>=0.7",
     "pipe>=2.2",
     "dependency-injector>=4.44.0",
+    "aiolimiter>=1.2.1",
 ]
 requires-python = "==3.12.*"
 readme = "README.md"

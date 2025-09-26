@@ -5,6 +5,7 @@ from loguru import logger
 from yarl import URL
 
 from config import Settings, TrimSettings
+from config.data import LimiterSettings
 from utils.saver import get_all_saver_classes, get_saver_by_name
 
 
@@ -56,6 +57,20 @@ def parse_console_arguments() -> Settings:
         choices=[i.__name__ for i in get_all_saver_classes()],
         default="EbookSaver",
     )
+    parser.add_argument(
+        "-r",
+        "--max-rate",
+        help="limit rate for limiter. Work with --period-time.",
+        type=float,
+        default=20.0,
+    )
+    parser.add_argument(
+        "-p",
+        "--period-time",
+        help="period time for limiter. Work with --max-rate.",
+        type=float,
+        default=10.0,
+    )
     args = parser.parse_args()
     if not args.from_:
         args.from_ = float("-inf")
@@ -64,6 +79,7 @@ def parse_console_arguments() -> Settings:
     args.saver = get_saver_by_name(args.saver)
 
     trim_args = TrimSettings(to=args.to, from_=args.from_, interactive=args.interactive)
+    limiter_args = LimiterSettings(max_rate=args.max_rate, time_period=args.period_time)
 
     settings_parsed = Settings(
         chunk_size=args.chunk_size,
@@ -71,6 +87,7 @@ def parse_console_arguments() -> Settings:
         saver=args.saver,
         working_directory=args.working_directory,
         trim_args=trim_args,
+        limiter=limiter_args,
     )
     logger.debug(settings_parsed)
 

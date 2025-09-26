@@ -38,7 +38,12 @@ class EbookSaver(Saver):
 
             logger.debug("set epub cover")
             rnd_cover = choice(self.context.covers)
-            name = f"{rnd_cover.name}{rnd_cover.extension}"
+            cover_path = Path(rnd_cover.name)
+            extension = rnd_cover.extension
+            if extension:
+                name = cover_path.with_suffix(extension).name
+            else:
+                name = cover_path.name
             logger.debug(f"take {name}")
             content = rnd_cover.data
 

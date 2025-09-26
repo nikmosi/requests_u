@@ -2,7 +2,8 @@ import asyncio
 
 import pytest
 
-from src import main as main_module
+import main
+import main as main_module
 
 
 class FakeContainer:
@@ -47,3 +48,12 @@ def test_middleware_shuts_down_resources(monkeypatch):
     instance = FakeContainer.instances[-1]
     assert instance.init_completed
     assert instance.shutdown_completed
+
+
+def test_entrypoint_suppresses_keyboard_interrupt(monkeypatch):
+    async def raise_keyboard_interrupt():
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(main, "middleware", raise_keyboard_interrupt)
+
+    main.entrypoint()

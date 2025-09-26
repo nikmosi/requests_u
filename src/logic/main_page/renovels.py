@@ -66,8 +66,8 @@ class RenovelsLoader(MainPageLoader):
         self, branch: int, count_chapters: int
     ) -> Sequence[Chapter]:
         count = 20
-        url = URL(
-            f"https://api.renovels.org/api/titles/chapters/?branch_id={branch}&ordering=index"
+        base_url = URL("https://api.renovels.org/api/titles/chapters/").with_query(
+            branch_id=branch, ordering="index"
         )
         tasks = []
         async with asyncio.TaskGroup() as tg:
@@ -75,7 +75,8 @@ class RenovelsLoader(MainPageLoader):
                 tasks.append(
                     tg.create_task(
                         get_text_response(
-                            self.session, url % {"count": count, "page": page + 1}
+                            self.session,
+                            base_url.update_query(count=count, page=page + 1),
                         )
                     )
                 )

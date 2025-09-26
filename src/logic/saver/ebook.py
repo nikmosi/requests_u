@@ -98,8 +98,8 @@ class EbookSaver(Saver):
             file_name = str(path)
             ei = epub.EpubImage()
             ei.file_name = file_name
-            mime_type = mt.guess_type(str(image.url))
-            ei.media_type = str(mime_type)
+            media_type, _ = mt.guess_type(str(image.url))
+            ei.media_type = media_type or "application/octet-stream"
             ei.content = image.data
             self._book.add_item(ei)
             yield path

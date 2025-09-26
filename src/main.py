@@ -65,6 +65,10 @@ async def middleware():
             await shutdown
 
 
+def entrypoint() -> None:
+    with contextlib.suppress(KeyboardInterrupt):
+        asyncio.run(middleware())
+
+
 if __name__ == "__main__":
-    contextlib.suppress(KeyboardInterrupt)
-    asyncio.run(middleware())
+    entrypoint()

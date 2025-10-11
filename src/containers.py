@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 import aiohttp
@@ -30,13 +31,13 @@ def init_settings() -> Settings:
     return ConsoleSettingsProvider().get()
 
 
-async def init_session() -> aiohttp.ClientSession:
+async def init_session() -> AsyncIterator[ClientSession]:
     cookies = {"mature": "c3a2ed4b199a1a15f5a5483504c7a75a7030dc4bi%3A1%3B"}
-    return aiohttp.ClientSession(cookies=cookies)
-
-
-async def close_session(s: aiohttp.ClientSession) -> None:
-    await s.close()
+    s = aiohttp.ClientSession(cookies=cookies)
+    try:
+        yield s
+    finally:
+        await s.close()
 
 
 class LoaderService:
@@ -63,9 +64,7 @@ def setup_limiter(settings: LimiterSettings) -> AsyncLimiter:
 
 class Container(containers.DeclarativeContainer):
     settings: providers.Resource[Settings] = providers.Resource(init_settings)
-    session: providers.Resource[ClientSession] = providers.Resource(
-        init=init_session, shutdown=close_session
-    )
+    session: providers.Resource[ClientSession] = providers.Resource(init_session)
     image_loader: providers.Singleton[ImageLoader] = providers.Singleton(
         BasicImageLoader, session
     )

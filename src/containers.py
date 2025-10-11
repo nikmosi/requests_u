@@ -10,11 +10,11 @@ from loguru import logger
 from yarl import URL
 
 from config.data import LimiterSettings, Settings
+from infra.console.settings_provider import ConsoleSettingsProvider
 from infra.loader import BasicImageLoader
 from infra.main_page.renovels import RenovelsLoader
 from infra.main_page.tlrulate import TlRulateLoader
 from logic import ImageLoader, MainPageLoader
-from utils.console import parse_console_arguments
 
 
 @dataclass()
@@ -24,6 +24,10 @@ class FindLoaderException(Exception):
     @property
     def message(self):
         return f"Can't find loader for {self.url=}"
+
+
+def init_settings() -> Settings:
+    return ConsoleSettingsProvider().get()
 
 
 async def init_session() -> aiohttp.ClientSession:
@@ -58,7 +62,7 @@ def setup_limiter(settings: LimiterSettings) -> AsyncLimiter:
 
 
 class Container(containers.DeclarativeContainer):
-    settings: providers.Resource[Settings] = providers.Resource(parse_console_arguments)
+    settings: providers.Resource[Settings] = providers.Resource(init_settings)
     session: providers.Resource[ClientSession] = providers.Resource(
         init=init_session, shutdown=close_session
     )

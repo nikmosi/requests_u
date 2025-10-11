@@ -1,11 +1,11 @@
 import asyncio
 import contextlib
 from collections.abc import Awaitable
+from itertools import batched
 
 from aiolimiter import AsyncLimiter
 from dependency_injector.wiring import Provide, inject
 from loguru import logger
-from pipe import batched
 
 from config import Settings
 from containers import Container, LoaderService
@@ -32,7 +32,7 @@ async def run(
 
     with args.saver(saver_context) as saver:
         connector = SaverLoaderConnector(saver, chapter_loader)
-        for chunked in trimmed_chapters | batched(args.chunk_size):
+        for chunked in batched(trimmed_chapters, n=args.chunk_size):
             async with asyncio.TaskGroup() as tg:
                 for chapter in chunked:
                     async with limiter:

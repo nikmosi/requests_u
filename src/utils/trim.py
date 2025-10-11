@@ -1,8 +1,10 @@
 import subprocess as sb
 from collections.abc import Iterable, Sequence
-from typing import TypeVar
+from typing import TypeVar, cast
 
 from loguru import logger
+
+# pyright: reportMissingTypeStubs=false
 from pipe import skip, take
 
 from config.data import TrimSettings
@@ -11,20 +13,18 @@ from utils.exceptions import FzfError
 trim_type = TypeVar("trim_type")
 
 
-def trim(args: TrimSettings, chapters: Iterable[trim_type]) -> Iterable[trim_type]:
+def trim[T](args: TrimSettings, chapters: Iterable[T]) -> Iterable[T]:
     if args.interactive:
         return interactive_trim(chapters)
     else:
         return in_bound_trim(chapters, args.from_, args.to)
 
 
-def in_bound_trim(
-    chapters: Iterable[trim_type], start: float, end: float
-) -> Iterable[trim_type]:
-    return chapters | take(end) | skip(start)
+def in_bound_trim[T](chapters: Iterable[T], start: float, end: float) -> Iterable[T]:
+    return cast(Iterable[T], chapters | take(end) | skip(start))
 
 
-def interactive_trim(elements: Iterable[trim_type]) -> Iterable[trim_type]:
+def interactive_trim[T](elements: Iterable[T]) -> Iterable[T]:
     chapters_list = list(elements)
     base_names = list(map(str, chapters_list))
 

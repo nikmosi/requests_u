@@ -16,7 +16,7 @@ async def get_html(session: aiohttp.ClientSession, url: URL) -> str:
         return await r.text()
 
 
-def get_headers() -> dict:
+def get_headers() -> dict[str, str]:
     return {
         "User-Agent": f"{fa.FakeUserAgent().random}",
         "Accept": "image/avif,image/webp,*/*",

@@ -6,11 +6,11 @@ from logic.saver import EbookSaver, FilesSaver
 from .exceptions import FindSaverException
 
 
-def inheritors(klass: type) -> set[type]:
+def inheritors[T](klass: type[T]) -> set[type[T]]:
     wow = [EbookSaver.__name__, FilesSaver.__name__]
     wow = str(wow)
-    subclasses = set()
-    work = [klass]
+    subclasses = set[type[T]]()
+    work: list[type[T]] = [klass]
     while work:
         parent = work.pop()
         for child in parent.__subclasses__():

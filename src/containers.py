@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
 import aiohttp
@@ -28,11 +26,13 @@ class FindLoaderException(Exception):
         return f"Can't find loader for {self.url=}"
 
 
-@asynccontextmanager
-async def init_session() -> AsyncGenerator[ClientSession, None]:
+async def init_session() -> aiohttp.ClientSession:
     cookies = {"mature": "c3a2ed4b199a1a15f5a5483504c7a75a7030dc4bi%3A1%3B"}
-    async with aiohttp.ClientSession(cookies=cookies) as session:
-        yield session
+    return aiohttp.ClientSession(cookies=cookies)
+
+
+async def close_session(s: aiohttp.ClientSession) -> None:
+    await s.close()
 
 
 class LoaderService:
@@ -59,7 +59,9 @@ def setup_limiter(settings: LimiterSettings) -> AsyncLimiter:
 
 class Container(containers.DeclarativeContainer):
     settings: providers.Resource[Settings] = providers.Resource(parse_console_arguments)
-    session: providers.Resource[ClientSession] = providers.Resource(init_session)
+    session: providers.Resource[ClientSession] = providers.Resource(
+        init=init_session, shutdown=close_session
+    )
     image_loader: providers.Singleton[ImageLoader] = providers.Singleton(
         BasicImageLoader, session
     )

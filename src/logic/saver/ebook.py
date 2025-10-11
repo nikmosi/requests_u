@@ -4,7 +4,9 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from random import choice
+from typing import Any
 
+# pyright: reportMissingTypeStubs=false
 from ebooklib import epub
 from loguru import logger
 
@@ -17,8 +19,12 @@ from logic.exceptions.base import SaverUsingWithoutWithException
 class EbookSaver(Saver):
     _is_entered: bool = False
     _book: epub.EpubBook = field(default_factory=epub.EpubBook)
-    _items: list[tuple[int, epub.EpubItem]] = field(default_factory=list)
-    _chapters: list[tuple[int, epub.EpubHtml]] = field(default_factory=list)
+    _items: list[tuple[int, epub.EpubItem]] = field(
+        default_factory=list[tuple[int, epub.EpubItem]]
+    )
+    _chapters: list[tuple[int, epub.EpubHtml]] = field(
+        default_factory=list[tuple[int, epub.EpubHtml]]
+    )
 
     def __post_init__(self) -> None:
         logger.debug(f"init {type(self).__name__} saver")
@@ -27,10 +33,10 @@ class EbookSaver(Saver):
         logger.debug(f"enter {type(self).__name__} saver")
         self._is_entered = True
 
-        self._book.set_title(self.context.title)
-        self._book.set_language(self.context.language)
+        self._book.set_title(self.context.title)  # type: ignore
+        self._book.set_language(self.context.language)  # type: ignore
 
-        self._book.add_author(self.context.author)
+        self._book.add_author(self.context.author)  # type: ignore
 
         if len(self.context.covers) > 0:
             covers = self.add_cover_collection()
@@ -47,7 +53,7 @@ class EbookSaver(Saver):
             logger.debug(f"take {name}")
             content = rnd_cover.data
 
-            self._book.set_cover(file_name=name, content=content)
+            self._book.set_cover(file_name=name, content=content)  # type: ignore
 
         return super().__enter__()
 
@@ -65,7 +71,7 @@ class EbookSaver(Saver):
             chapter_id=loaded_chapter.id, images=loaded_chapter.images
         )
         paths = [(Path("..") / path) for path in paths]
-        html.set_content(
+        html.set_content(  # type: ignore
             f"<html><body><p>{loaded_chapter.title}</p><br/>{self.get_paragraph_html(loaded_chapter)}{self.get_images_html(paths)}</html>"
         )
 
@@ -101,7 +107,7 @@ class EbookSaver(Saver):
             media_type, _ = mt.guess_type(str(image.url))
             ei.media_type = media_type or "application/octet-stream"
             ei.content = image.data
-            self._book.add_item(ei)
+            self._book.add_item(ei)  # type: ignore
             yield path
 
     def get_file_name(self):
@@ -122,14 +128,16 @@ class EbookSaver(Saver):
             lang=self.context.language,
         )
 
-        page.set_content(f"<html><body><br/>{image_htmls}</html>")
+        page.set_content(f"<html><body><br/>{image_htmls}</html>")  # type: ignore
 
         return page
 
-    def __exit__(self, exception_type, exception_value, exception_traceback):
+    def __exit__(
+        self, exception_type: type, exception_value: Any, exception_traceback: Any
+    ):
         self._items.sort(key=operator.itemgetter(0))
         for i in self._items:
-            self._book.add_item(i[1])
+            self._book.add_item(i[1])  # type: ignore
         style = "body { font-family: Roboto, Times, Times New Roman, serif; }"
         nav_css = epub.EpubItem(
             uid="style_nav",
@@ -137,15 +145,15 @@ class EbookSaver(Saver):
             media_type="text/css",
             content=style,  # pyright: ignore
         )
-        self._book.add_item(nav_css)
+        self._book.add_item(nav_css)  # type: ignore
 
-        self._book.toc = epub.Section("Chapters"), *[i[1] for i in self._items]
+        self._book.toc = epub.Section("Chapters"), *[i[1] for i in self._items]  # type: ignore
 
         self._book.spine = ["nav", *[i[1] for i in self._items]]
 
-        self._book.add_item(epub.EpubNcx())
-        self._book.add_item(epub.EpubNav())
+        self._book.add_item(epub.EpubNcx())  # type: ignore
+        self._book.add_item(epub.EpubNav())  # type: ignore
 
         file_name = self.get_file_name()
-        epub.write_epub(f"{file_name}.epub", self._book)
+        epub.write_epub(f"{file_name}.epub", self._book)  # type: ignore
         logger.debug(f"exit {type(self).__name__} saver")

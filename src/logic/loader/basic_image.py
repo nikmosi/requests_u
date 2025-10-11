@@ -8,7 +8,7 @@ from domain import Image, LoadedImage
 
 class BasicImageLoader(ImageLoader):
     def __init__(
-        self, session: aiohttp.ClientSession, headers: dict | None = None
+        self, session: aiohttp.ClientSession, headers: dict[str, str] | None = None
     ) -> None:
         super().__init__(session)
 

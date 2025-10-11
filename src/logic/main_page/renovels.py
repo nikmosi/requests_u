@@ -1,7 +1,7 @@
 import asyncio
 import json
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import override
 
 from bs4 import BeautifulSoup
@@ -26,7 +26,12 @@ class RenovelsChapterLoader(ChapterLoader):
         paragraphs = [i.text for i in html]
 
         return LoadedChapter(
-            **asdict(chapter), title=title, images=[], paragraphs=paragraphs
+            id=chapter.id,
+            name=chapter.name,
+            url=chapter.url,
+            title=title,
+            images=[],
+            paragraphs=paragraphs,
         )
 
 
@@ -69,7 +74,7 @@ class RenovelsLoader(MainPageLoader):
         base_url = URL("https://api.renovels.org/api/titles/chapters/").with_query(
             branch_id=branch, ordering="index"
         )
-        tasks = []
+        tasks: list[asyncio.Task[str]] = []
         async with asyncio.TaskGroup() as tg:
             for page in range(count_chapters // count + 1):
                 tasks.append(

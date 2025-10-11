@@ -13,11 +13,13 @@ class FilesSaver(Saver):
     def __post_init__(self) -> None:
         logger.debug(f"init {type(self).__name__} saver")
 
-    async def save_chapter(self, chapter: LoadedChapter, *args, **kwargs) -> None:
+    async def save_chapter(self, loaded_chapter: LoadedChapter) -> None:
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(self.save_text(chapter))
-            for index, image in enumerate(chapter.images, 1):
-                tg.create_task(self.save_image(image, f"{chapter.base_name}_{index}"))
+            tg.create_task(self.save_text(loaded_chapter))
+            for index, image in enumerate(loaded_chapter.images, 1):
+                tg.create_task(
+                    self.save_image(image, f"{loaded_chapter.base_name}_{index}")
+                )
 
     async def save_text(self, chapter: LoadedChapter) -> None:
         file_name = chapter.base_name.encode()[0:200].decode()

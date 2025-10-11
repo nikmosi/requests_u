@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 
 from domain import LoadedChapter, SaverContext
 
@@ -12,7 +13,9 @@ class Saver(ABC):
         return self
 
     @abstractmethod
-    def __exit__(self, exception_type, exception_value, exception_traceback):
+    def __exit__(
+        self, exception_type: type, exception_value: Any, exception_traceback: Any
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod

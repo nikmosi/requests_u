@@ -1,18 +1,20 @@
 import asyncio
 import operator
 from collections.abc import Iterable, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import cast, override
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from loguru import logger
-from pipe import filter as pfilter
-from pipe import map as pmap
+
+# pyright: reportMissingTypeStubs=false
+# pyright: reportMissingTypeStubs=false
 from yarl import URL
 
 from core import ChapterLoader, ImageLoader, MainPageLoader
 from domain import Chapter, Image, LoadedChapter, LoadedImage, MainPageInfo
+from logic.exceptions.base import CatchImageWithoutSrc
 from utils.bs4 import get_soup
 
 
@@ -26,13 +28,15 @@ class TlRulateChapterLoader(ChapterLoader):
 
         text_container = TextContainerParser(soup).parse()
         image_urls = set(text_container.image_urls)
-        relative_urls = set(image_urls | pfilter(lambda a: not a.is_absolute()))
+        relative_urls = set([i for i in image_urls if not i.is_absolute()])
         absolute_urls = list(image_urls - relative_urls)
         absolute_urls += [self.add_domain(i, chapter.url) for i in relative_urls]
         images = await self.load_images_by_urls(absolute_urls)
 
         return LoadedChapter(
-            **asdict(chapter),
+            id=chapter.id,
+            name=chapter.name,
+            url=chapter.url,
             title=text_container.title,
             paragraphs=text_container.paragraphs,
             images=images,
@@ -44,12 +48,13 @@ class TlRulateChapterLoader(ChapterLoader):
         return domain.with_path(url.path)
 
     async def load_images_by_urls(self, urls: Sequence[URL]) -> Sequence[LoadedImage]:
-        tasks = []
+        tasks: list[asyncio.Task[LoadedImage | None]] = []
         async with asyncio.TaskGroup() as tg:
             for url in urls:
                 image = Image(url)
                 tasks.append(tg.create_task(self.image_loader.load_image(image)))
-        return list(tasks | pmap(operator.methodcaller("result")) | pfilter(bool))
+        results = (i.result() for i in tasks)
+        return list(filter(None, results))
 
 
 @dataclass
@@ -91,7 +96,6 @@ class TextContainerParser:
     def title(self) -> str:
         title = self.text_container.find("h1")
         assert title is not None
-        cast(Tag, title)
         return title.text
 
     @property
@@ -108,7 +112,9 @@ class TextContainerParser:
     def images_urls(self) -> Iterable[URL]:
         for i in self.context_text.find_all("img"):
             src = i.get("src")
-            yield URL(src)
+            if src is None:
+                raise CatchImageWithoutSrc
+            yield URL(str(src))
 
 
 class TlRulateLoader(MainPageLoader):
@@ -121,10 +127,11 @@ class TlRulateLoader(MainPageLoader):
         main_page_soup = await get_soup(self.session, self.url)
         logger.debug("getting chapters url")
         chapter_rows = main_page_soup.find_all(class_="chapter_row")
-        title = (
+        title = cast(
+            str,
             main_page_soup.find(class_="book-header")
             .findNext("h1")  # pyright: ignore
-            .text.strip()  # pyright: ignore
+            .text.strip(),  # pyright: ignore
         )
         logger.debug(f"get {title=}")
         if len(title) == 0:
@@ -149,12 +156,12 @@ class TlRulateLoader(MainPageLoader):
             return []
         image_urls = self.parse_images_urls(container)
 
-        images = []
+        images: list[LoadedImage | None] = []
         for i in image_urls:
             image = Image(url=i)
             images.append(await self.image_loader.load_image(image))
         logger.debug(f"load {len(images)} covers")
-        return images
+        return [i for i in images if i]
 
     def to_chapters(self, rows: Iterable[Tag]):
         for index, row in enumerate(rows, 1):
@@ -173,5 +180,7 @@ class TlRulateLoader(MainPageLoader):
     def parse_images_urls(self, content_text: Tag) -> Iterable[URL]:
         for i in content_text.find_all("img"):
             src = i.get("src")
-            url_src = URL(src)
+            if src is None:
+                raise CatchImageWithoutSrc
+            url_src = URL(str(src))
             yield self.normalize_url(url_src)

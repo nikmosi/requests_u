@@ -12,9 +12,9 @@ from loguru import logger
 # pyright: reportMissingTypeStubs=false
 from yarl import URL
 
-from core import ChapterLoader, ImageLoader, MainPageLoader
 from domain import Chapter, Image, LoadedChapter, LoadedImage, MainPageInfo
-from logic.exceptions.base import CatchImageWithoutSrc
+from infra.exceptions.base import CatchImageWithoutSrc
+from logic import ChapterLoader, ImageLoader, MainPageLoader
 from utils.bs4 import get_soup
 
 

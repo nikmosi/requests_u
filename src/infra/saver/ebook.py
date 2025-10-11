@@ -10,9 +10,9 @@ from typing import Any
 from ebooklib import epub
 from loguru import logger
 
-from core import Saver
 from domain import LoadedChapter, LoadedImage
-from logic.exceptions.base import SaverUsingWithoutWithException
+from infra.exceptions.base import SaverUsingWithoutWithException
+from logic import Saver
 
 
 @dataclass

@@ -2,9 +2,9 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from core.loader import ChapterLoader
-from core.saver import Saver
 from domain import Chapter
+from logic.loader import ChapterLoader
+from logic.saver import Saver
 
 
 @dataclass

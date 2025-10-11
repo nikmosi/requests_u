@@ -2,8 +2,8 @@ from typing import override
 
 import aiohttp
 
-from core import ImageLoader
 from domain import Image, LoadedImage
+from logic import ImageLoader
 
 
 class BasicImageLoader(ImageLoader):

@@ -9,8 +9,8 @@ from loguru import logger
 
 from config import Settings
 from containers import Container, LoaderService
-from core import ChapterLoader, MainPageLoader, SaverLoaderConnector
 from domain import SaverContext
+from logic import ChapterLoader, MainPageLoader, SaverLoaderConnector
 from utils import (
     change_working_directory,
     trim,

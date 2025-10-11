@@ -10,10 +10,10 @@ from loguru import logger
 from yarl import URL
 
 from config.data import LimiterSettings, Settings
-from core import ImageLoader, MainPageLoader
-from logic.loader import BasicImageLoader
-from logic.main_page.renovels import RenovelsLoader
-from logic.main_page.tlrulate import TlRulateLoader
+from infra.loader import BasicImageLoader
+from infra.main_page.renovels import RenovelsLoader
+from infra.main_page.tlrulate import TlRulateLoader
+from logic import ImageLoader, MainPageLoader
 from utils.console import parse_console_arguments
 
 

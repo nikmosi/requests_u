@@ -8,8 +8,8 @@ from bs4 import BeautifulSoup
 from loguru import logger
 from yarl import URL
 
-from core import ChapterLoader, MainPageLoader
 from domain import Chapter, Image, LoadedChapter, MainPageInfo
+from logic import ChapterLoader, MainPageLoader
 from utils.bs4 import get_soup, get_text_response
 
 

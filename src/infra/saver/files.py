@@ -4,8 +4,8 @@ from dataclasses import dataclass
 import aiofiles
 from loguru import logger
 
-from core import Saver
 from domain import LoadedChapter, LoadedImage
+from logic import Saver
 
 
 @dataclass

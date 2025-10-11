@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
-from core import Saver
-from logic.saver import EbookSaver, FilesSaver
+from infra.saver import EbookSaver, FilesSaver
+from logic import Saver
 
 from .exceptions import FindSaverException
 

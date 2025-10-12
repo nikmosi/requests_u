@@ -2,21 +2,21 @@ from dataclasses import dataclass
 
 
 @dataclass
-class LogicException(Exception):
+class InfraException(Exception):
     @property
     def message(self) -> str:
-        return "Occur error in logic"
+        return "Occur error in infrastructure."
 
 
 @dataclass
-class SaverUsingWithoutWithException(LogicException):
+class SaverUsingWithoutWithException(InfraException):
     @property
     def message(self) -> str:
         return "Saver using without with context"
 
 
 @dataclass
-class CatchImageWithoutSrc(LogicException):
+class CatchImageWithoutSrc(InfraException):
     @property
     def message(self) -> str:
         return "When parsing got image without src attribute."

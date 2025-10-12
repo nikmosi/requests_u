@@ -13,6 +13,13 @@ class FilesSaver(Saver):
     def __post_init__(self) -> None:
         logger.debug(f"init {type(self).__name__} saver")
 
+    def __exit__(
+        self,
+        *_,
+    ) -> bool:
+        logger.trace("exit from file saver.")
+        return True
+
     async def save_chapter(self, loaded_chapter: LoadedChapter) -> None:
         async with asyncio.TaskGroup() as tg:
             tg.create_task(self.save_text(loaded_chapter))

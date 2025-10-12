@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
+from types import TracebackType
 
 from domain import LoadedChapter, SaverContext
 
@@ -14,10 +14,11 @@ class Saver(ABC):
 
     @abstractmethod
     def __exit__(
-        self, exception_type: type, exception_value: Any, exception_traceback: Any
-    ) -> None:
-        raise NotImplementedError
+        self,
+        exception_type: type[BaseException] | None,
+        exception_value: BaseException | None,
+        exception_traceback: TracebackType | None,
+    ) -> bool: ...
 
     @abstractmethod
-    async def save_chapter(self, loaded_chapter: LoadedChapter) -> None:
-        raise NotImplementedError
+    async def save_chapter(self, loaded_chapter: LoadedChapter) -> None: ...

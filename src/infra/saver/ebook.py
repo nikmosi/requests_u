@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from random import choice
-from typing import Any
+from types import TracebackType
 
 # pyright: reportMissingTypeStubs=false
 from ebooklib import epub
@@ -133,8 +133,17 @@ class EbookSaver(Saver):
         return page
 
     def __exit__(
-        self, exception_type: type, exception_value: Any, exception_traceback: Any
-    ):
+        self,
+        exception_type: type[BaseException] | None,
+        exception_value: BaseException | None,
+        exception_traceback: TracebackType | None,
+    ) -> bool:
+        if exception_type:
+            logger.opt(exception=exception_value).exception(
+                "Unhandled error in context"
+            )
+            logger.trace(exception_traceback)
+            return False
         self._items.sort(key=operator.itemgetter(0))
         for i in self._items:
             self._book.add_item(i[1])  # type: ignore
@@ -157,3 +166,5 @@ class EbookSaver(Saver):
         file_name = self.get_file_name()
         epub.write_epub(f"{file_name}.epub", self._book)  # type: ignore
         logger.debug(f"exit {type(self).__name__} saver")
+
+        return True

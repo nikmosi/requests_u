@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from domain.images import LoadedImage
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class SaverContext:
     title: str
     language: str

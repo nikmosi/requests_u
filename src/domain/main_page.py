@@ -5,7 +5,7 @@ from domain.chapters import Chapter
 from domain.images import LoadedImage
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class MainPageInfo:
     chapters: Sequence[Chapter]
     title: str

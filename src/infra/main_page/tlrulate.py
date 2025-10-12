@@ -7,9 +7,6 @@ from typing import cast, override
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from loguru import logger
-
-# pyright: reportMissingTypeStubs=false
-# pyright: reportMissingTypeStubs=false
 from yarl import URL
 
 from domain import Chapter, Image, LoadedChapter, LoadedImage, MainPageInfo

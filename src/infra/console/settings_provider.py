@@ -75,9 +75,9 @@ class ConsoleSettingsProvider(SettingsProvider):
         )
         args = parser.parse_args()
         if not args.from_:
-            args.from_ = float("-inf")
+            args.from_ = 0
         if not args.to:
-            args.to = float("inf")
+            args.to = 10**10
         args.saver = get_saver_by_name(args.saver)
 
         trim_args = TrimSettings(

@@ -6,8 +6,8 @@ from yarl import URL
 
 
 class TrimSettings(BaseModel):
-    from_: float
-    to: float
+    from_: int
+    to: int
     interactive: bool
 
 

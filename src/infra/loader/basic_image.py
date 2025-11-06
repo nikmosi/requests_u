@@ -1,6 +1,7 @@
 from typing import override
 
 import aiohttp
+from loguru import logger
 
 from domain import Image, LoadedImage
 from logic import ImageLoader
@@ -38,6 +39,18 @@ class BasicImageLoader(ImageLoader):
     @override
     async def load_image(self, image: Image) -> LoadedImage | None:
         url = image.url
-        async with self.session.get(url, headers=self.headers) as r:
-            r.raise_for_status()
-            return LoadedImage(url=url, data=await r.read())
+        timeout = 3
+        try:
+            async with self.session.get(
+                url, headers=self.headers, timeout=aiohttp.ClientTimeout(total=timeout)
+            ) as r:
+                try:
+                    r.raise_for_status()
+                except aiohttp.ClientResponseError as e:
+                    logger.opt(exception=e).warning(
+                        f"Got {e.code} status code from {url}"
+                    )
+                data = await r.read()
+                return LoadedImage(url=url, data=data)
+        except TimeoutError:
+            logger.warning(f"got timeout from {url} with {timeout} sec.")

@@ -33,7 +33,7 @@ def init_settings() -> Settings:
 
 async def init_session() -> AsyncIterator[ClientSession]:
     cookies = {"mature": "c3a2ed4b199a1a15f5a5483504c7a75a7030dc4bi%3A1%3B"}
-    s = aiohttp.ClientSession(cookies=cookies)
+    s = aiohttp.ClientSession(cookies=cookies, timeout=aiohttp.ClientTimeout(total=15))
     try:
         yield s
     finally:

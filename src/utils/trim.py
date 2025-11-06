@@ -38,6 +38,7 @@ def interactive_trim[T](elements: Iterable[T]) -> Iterable[T]:
 
 
 def fzf_filter(data: Sequence[str], placeholder: str = "Filter...") -> int:
+    data = [i.strip() for i in data]
     input_data = "\n".join(data)
     selected_item = sb.check_output(
         f"fzf --color=16 --prompt='{placeholder} > '",

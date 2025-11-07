@@ -26,6 +26,9 @@ class RanobesChapterLoader(ChapterLoader):
         title = container.find("h1").get_text()  # pyright: ignore
 
         all_p_tags = container.find_all("p")
+        paragraphs = [i.text for i in all_p_tags]
+        if not paragraphs:
+            raise ValueError(paragraphs)
 
         return LoadedChapter(
             id=chapter.id,
@@ -33,7 +36,7 @@ class RanobesChapterLoader(ChapterLoader):
             url=chapter.url,
             title=title,
             images=[],
-            paragraphs=[i.text for i in all_p_tags],
+            paragraphs=paragraphs,
         )
 
 
@@ -55,7 +58,8 @@ class RanobesLoader(MainPageLoader):
             raise ValueError(title)
 
         chapter_page_url = URL(chapter_tag.find("a").find_next("a").get("href"))  # pyright: ignore
-        chapter_page_url = self.url.with_path(str(chapter_page_url))
+        if not chapter_page_url.is_absolute():
+            chapter_page_url = self.url.with_path(str(chapter_page_url))
         if not chapter_page_url:
             raise ValueError(chapter_page_url)
 

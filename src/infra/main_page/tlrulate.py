@@ -92,7 +92,8 @@ class TextContainerParser:
     @property
     def title(self) -> str:
         title = self.text_container.find("h1")
-        assert title is not None
+        if title is None:
+            raise ValueError(title)
         return title.text
 
     @property

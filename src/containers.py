@@ -13,6 +13,7 @@ from yarl import URL
 from config.data import LimiterSettings, Settings
 from infra.console.settings_provider import ConsoleSettingsProvider
 from infra.loader import BasicImageLoader
+from infra.main_page.ranobes import RanobesLoader
 from infra.main_page.renovels import RenovelsLoader
 from infra.main_page.tlrulate import TlRulateLoader
 from logic import ImageLoader, MainPageLoader
@@ -53,6 +54,8 @@ class LoaderService:
                 parser = TlRulateLoader
             case "renovels.org":
                 parser = RenovelsLoader
+            case "ranobes.com":
+                parser = RanobesLoader
             case _:
                 raise FindLoaderException(url)
         return parser(url, self.image_loader, self.session)

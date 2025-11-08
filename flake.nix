@@ -47,10 +47,10 @@
         {
           default = nixpkgs.legacyPackages.${system}.mkShell {
             buildInputs = self.checks.${system}.pre-commit-check.enabledPackages;
-            packages = with pkgs; [ pdm ];
+            packages = with pkgs; [ uv ];
             shellHook = ''
               ${self.checks.${system}.pre-commit-check.shellHook}
-              exec fish
+              exec nu
             '';
           };
         }

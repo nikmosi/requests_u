@@ -28,7 +28,12 @@ class RanobesChapterLoader(ChapterLoader):
         all_p_tags = container.find_all("p")
         paragraphs = [i.text for i in all_p_tags]
         if not paragraphs:
-            raise ValueError(paragraphs)
+            article = container.find("div", id="arrticle", class_="text")
+            if not article:
+                raise ValueError(f"{article=} and {paragraphs=}")
+            text = article.get_text("\n")
+            text = re.sub(r"\n{2,}", "\n", text)
+            paragraphs = text.split("\n")
 
         return LoadedChapter(
             id=chapter.id,

@@ -10,9 +10,10 @@ from dependency_injector import containers, providers
 from loguru import logger
 from yarl import URL
 
-from config.data import LimiterSettings, Settings
+from config.data import LimiterSettings, SessionSettings, Settings
 from infra.console.settings_provider import ConsoleSettingsProvider
 from infra.loader import BasicImageLoader
+from infra.main_page.ifreedom import IfreefomLoader
 from infra.main_page.ranobes import RanobesLoader
 from infra.main_page.renovels import RenovelsLoader
 from infra.main_page.tlrulate import TlRulateLoader
@@ -32,9 +33,10 @@ def init_settings() -> Settings:
     return ConsoleSettingsProvider().get()
 
 
-async def init_session() -> AsyncIterator[ClientSession]:
-    cookies = {"mature": "c3a2ed4b199a1a15f5a5483504c7a75a7030dc4bi%3A1%3B"}
-    s = aiohttp.ClientSession(cookies=cookies, timeout=aiohttp.ClientTimeout(total=15))
+async def init_session(settings: SessionSettings) -> AsyncIterator[ClientSession]:
+    s = aiohttp.ClientSession(
+        cookies=settings.cookies, timeout=settings.timeout, headers=settings.headers
+    )
     try:
         yield s
     finally:
@@ -56,6 +58,8 @@ class LoaderService:
                 parser = RenovelsLoader
             case "ranobes.com":
                 parser = RanobesLoader
+            case "ifreedom.su":
+                parser = IfreefomLoader
             case _:
                 raise FindLoaderException(url)
         return parser(url, self.image_loader, self.session)
@@ -67,7 +71,9 @@ def setup_limiter(settings: LimiterSettings) -> AsyncLimiter:
 
 class Container(containers.DeclarativeContainer):
     settings: providers.Resource[Settings] = providers.Resource(init_settings)
-    session: providers.Resource[ClientSession] = providers.Resource(init_session)
+    session: providers.Resource[ClientSession] = providers.Resource(
+        init_session, settings=settings.provided.session
+    )
     image_loader: providers.Singleton[ImageLoader] = providers.Singleton(
         BasicImageLoader, session
     )

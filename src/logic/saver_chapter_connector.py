@@ -17,13 +17,13 @@ class SaverLoaderConnector:
     async def handle(self, chapter: Chapter):
         logger.debug(f"working with {chapter.base_name}")
         async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(5),
+            stop=stop_after_attempt(10),
             wait=wait_chain(
-                wait_fixed(timedelta(seconds=5))
-                + wait_fixed(timedelta(seconds=10))
-                + wait_fixed(timedelta(seconds=30))
-                + wait_fixed(timedelta(seconds=60))
-                + wait_fixed(timedelta(seconds=120))
+                wait_fixed(timedelta(seconds=5)),
+                wait_fixed(timedelta(seconds=10)),
+                wait_fixed(timedelta(seconds=120)),
+                wait_fixed(timedelta(seconds=120)),
+                wait_fixed(timedelta(seconds=600)),
             ),
             reraise=True,
         ):

@@ -11,6 +11,12 @@ from utils.saver import get_all_saver_classes, get_saver_by_name
 
 
 class ConsoleSettingsProvider(SettingsProvider):
+    def _parse_cookies(self, cookies: str) -> dict[str, str]:
+        if not cookies:
+            return {}
+        pairs = (i.split("=", 1) for i in cookies.split(";"))
+        return {k.strip(): v for k, v in pairs}
+
     def get(self) -> Settings:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -73,6 +79,13 @@ class ConsoleSettingsProvider(SettingsProvider):
             type=float,
             default=10.0,
         )
+        parser.add_argument(
+            "--cookies",
+            help="Cookie string like 'a=1; b=2'",
+            type=str,
+            default="",
+        )
+
         args = parser.parse_args()
         if not args.from_:
             args.from_ = 0
@@ -95,6 +108,10 @@ class ConsoleSettingsProvider(SettingsProvider):
             trim_args=trim_args,
             limiter=limiter_args,
         )
+
+        cookies = self._parse_cookies(args.cookies)
+        settings_parsed.session.merge_cookies(cookies)
+
         logger.debug(settings_parsed)
 
         return settings_parsed

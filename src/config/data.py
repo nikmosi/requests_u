@@ -1,7 +1,8 @@
 from pathlib import Path
+from typing import Annotated
 
 from aiohttp import ClientTimeout
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field, HttpUrl
 from pydantic_settings import BaseSettings
 from yarl import URL
 
@@ -40,10 +41,15 @@ class SessionSettings(BaseModel):
         self.cookies = self.cookies | other
 
 
+def http_url(value: URL) -> URL:
+    HttpUrl(str(value))
+    return value
+
+
 class Settings(BaseSettings):
     working_directory: Path = Path(".")
     chunk_size: int = 40
-    url: URL
+    url: Annotated[URL, AfterValidator(http_url)]
     trim_args: TrimSettings
     saver: type
     limiter: LimiterSettings

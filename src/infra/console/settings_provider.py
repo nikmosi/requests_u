@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 from loguru import logger
+from pydantic import ValidationError
 from yarl import URL
 
 from config import Settings, TrimSettings
@@ -100,14 +101,18 @@ class ConsoleSettingsProvider(SettingsProvider):
             max_rate=args.max_rate, time_period=args.period_time
         )
 
-        settings_parsed = Settings(
-            chunk_size=args.chunk_size,
-            url=args.url,
-            saver=args.saver,
-            working_directory=args.working_directory,
-            trim_args=trim_args,
-            limiter=limiter_args,
-        )
+        try:
+            settings_parsed = Settings(
+                chunk_size=args.chunk_size,
+                url=args.url,
+                saver=args.saver,
+                working_directory=args.working_directory,
+                trim_args=trim_args,
+                limiter=limiter_args,
+            )
+        except ValidationError as e:
+            logger.error(f"Got ValidationError: {e}")
+            exit(1)
 
         cookies = self._parse_cookies(args.cookies)
         settings_parsed.session.merge_cookies(cookies)

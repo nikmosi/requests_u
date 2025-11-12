@@ -22,8 +22,8 @@ class IfreedomChapterLoader(ChapterLoader):
             logger.error("got captcha")
             raise ValueError("captcha")
 
-        title = soup.find("h1", class_="entry-title").text  # pyright: ignore
-        container = soup.find("div", class_="entry-content")
+        title = soup.find("div", class_="block").find("h1").text  # pyright: ignore
+        container = soup.find("div", class_="chapter-content")
 
         if container.find("div", class_="single-notice"):  # pyright: ignore
             logger.error("got stoper")
@@ -58,9 +58,9 @@ class IfreefomLoader(MainPageLoader):
     @override
     async def load(self) -> MainPageInfo:
         soup = await get_soup(self.session, self.url)
-        title = soup.find("h1", class_=["entry-title", "ranobe"]).text  # pyright: ignore
+        title = soup.find("div", class_="book-info").find("h1").text  # pyright: ignore
         cover_url = URL(
-            soup.find("div", class_=["img-ranobe", "shadow-book"])
+            soup.find("div", class_=["book-img", "block-book-slide-img"])
             .find("img")  # pyright: ignore
             .get("src")  # pyright: ignore
         )
@@ -79,8 +79,8 @@ class IfreefomLoader(MainPageLoader):
 
     async def _collect_chapters(self, chapter_page: BeautifulSoup) -> Sequence[Chapter]:
         chapters: list[Chapter] = []
-        chapters_line = chapter_page.find("div", class_="menu-ranobe").find_all(  # pyright: ignore
-            "div", class_="li-ranobe"
+        chapters_line = chapter_page.find("div", class_="tab-content").find_all(  # pyright: ignore
+            "div", class_="chapterinfo"
         )
         chapters_line = reversed(chapters_line)
 

@@ -1,3 +1,4 @@
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import override
@@ -84,6 +85,9 @@ class IfreefomLoader(MainPageLoader):
         )
         chapters_line = reversed(chapters_line)
 
+        skipped_vip = 0
+        skipped_pay = 0
+
         for id, line in enumerate(chapters_line, 1):
             tag_a = line.find("a")
             if tag_a is None:
@@ -91,8 +95,22 @@ class IfreefomLoader(MainPageLoader):
             href = tag_a.get("href")
             if not href:
                 raise ValueError(f"{href=}")
+            href = str(href)
+            if href == "https://ifreedom.su/podpiska/":
+                skipped_vip += 1
+                continue
+            if re.match("https://ifreedom.su/koshelek.*", href):
+                skipped_pay += 1
+                continue
+
             name = tag_a.text
 
-            chapters.append(Chapter(id, name, URL(str(href))))
+            chapters.append(Chapter(id, name, URL(href)))
+
+        if skipped_pay:
+            logger.warning(f"{skipped_pay} skipped because of paywall.")
+
+        if skipped_vip:
+            logger.warning(f"{skipped_vip} because of vip wall.")
 
         return chapters

@@ -1,7 +1,9 @@
 import asyncio
 import json
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from json import JSONDecodeError
 from typing import Any, TypeVar, override
 
@@ -31,14 +33,14 @@ class RenovelsChapterLoader(ChapterLoader):
             raise JsonParsingError(page_url=chapter.url) from exc
         logger.debug(f"get {chapter.base_name}")
         response = _validate_payload(RenovelsChapterResponse, res, chapter.url)
-        html = BeautifulSoup(response.content.content, "lxml").find_all("p")
+        html = BeautifulSoup(response.content, "lxml").find_all("p")
         paragraphs = [i.text for i in html]
 
         return LoadedChapter(
             id=chapter.id,
             name=chapter.name,
             url=chapter.url,
-            title=response.content.chapter,
+            title=response.name,
             images=[],
             paragraphs=paragraphs,
         )
@@ -52,21 +54,31 @@ class RenovelsLoader(MainPageLoader):
     @override
     async def load(self) -> MainPageInfo:
         main_page_soup = await get_soup(self.session, self.url)
-        scripts = main_page_soup.find(id="__NEXT_DATA__")
-        if scripts is None:
-            raise MainPageParsingError(
-                detail="__NEXT_DATA__ script not found", page_url=self.url
-            )
+        scripts = main_page_soup.find_all("script")
+        script = None
+        for s in scripts:
+            if "__RQ_R" in s.text:
+                script = s
+                break
+        if script is None:
+            raise MainPageParsingError(detail="script not found", page_url=self.url)
         try:
-            data = json.loads(scripts.get_text())
+            script_text = script.get_text()
+            data = re.search(r"\.push\((\{.*?\})\)", script_text, re.S)
+            if data is None:
+                raise MainPageParsingError(
+                    detail="can't grep dict in script", page_url=self.url
+                )
+            data_str = data.group(1)
+            data = json.loads(data_str)
         except JSONDecodeError as exc:
             raise JsonParsingError(page_url=self.url) from exc
 
         content = _validate_payload(RenovelsScriptData, data, self.url)
-        content_data = content.props.pageProps.fallbackData.content
+        content_data = content.queries[0].state.data.json_
         branch_info = content_data.branches[0]
 
-        image = Image(self.domain.with_path(content_data.img.high))
+        image = Image(self.domain.with_path(content_data.cover.high))
         cover = await self.image_loader.load_image(image)
 
         covers = [cover] if cover is not None else []
@@ -107,7 +119,7 @@ class RenovelsLoader(MainPageLoader):
             response = _validate_payload(
                 RenovelsChaptersPageResponse, payload, page_url
             )
-            ids.extend(chapter.id for chapter in response.content)
+            ids.extend(chapter.id for chapter in response.results)
         api = URL("https://api.renovels.org/api/v2/titles/chapters/")
         return [Chapter(i, str(i), api / str(j)) for i, j in enumerate(ids, 1)]
 
@@ -122,8 +134,18 @@ def _validate_payload(model_type: type[TModel], payload: Any, page_url: URL) -> 
         raise JsonValidationError(detail=str(exc), page_url=page_url) from exc
 
 
+# =========================
+# BASE
+# =========================
+
+
 class RenovelsBaseModel(BaseModel):
     model_config = ConfigDict(extra="ignore")
+
+
+# =========================
+# TITLE / CONTENT MODELS
+# =========================
 
 
 class RenovelsImage(RenovelsBaseModel):
@@ -136,39 +158,125 @@ class RenovelsBranch(RenovelsBaseModel):
 
 class RenovelsContent(RenovelsBaseModel):
     main_name: str = Field(min_length=1)
-    img: RenovelsImage
+    cover: RenovelsImage
     count_chapters: int = Field(ge=0)
     branches: list[RenovelsBranch] = Field(min_length=1)
 
 
-class RenovelsFallbackData(RenovelsBaseModel):
-    content: RenovelsContent
+# =========================
+# REACT QUERY WRAPPER MODELS
+# =========================
 
 
-class RenovelsPageProps(RenovelsBaseModel):
-    fallbackData: RenovelsFallbackData
+class RenovelsQueryData(RenovelsBaseModel):
+    json_: RenovelsContent = Field(alias="json")
 
 
-class RenovelsProps(RenovelsBaseModel):
-    pageProps: RenovelsPageProps
+class RenovelsQueryState(RenovelsBaseModel):
+    data: RenovelsQueryData
+
+
+class RenovelsQuery(RenovelsBaseModel):
+    state: RenovelsQueryState
 
 
 class RenovelsScriptData(RenovelsBaseModel):
-    props: RenovelsProps
+    mutations: list[Any]
+    queries: list[RenovelsQuery]
 
 
-class RenovelsChapterContent(RenovelsBaseModel):
-    chapter: str = Field(min_length=1)
-    content: str = Field(min_length=1)
+# =========================
+# CHAPTER MODELS
+# =========================
 
 
-class RenovelsChapterResponse(RenovelsBaseModel):
-    content: RenovelsChapterContent
+class RenovelsPublisherCover(RenovelsBaseModel):
+    mid: str = Field(min_length=1)
+    high: str = Field(min_length=1)
+
+
+class RenovelsPublisherShort(RenovelsBaseModel):
+    id: int
+    name: str = Field(min_length=1)
+    dir: str = Field(min_length=1)
+    cover: RenovelsPublisherCover
 
 
 class RenovelsChapterShort(RenovelsBaseModel):
     id: int
+    index: int
+    tome: int
+    chapter: str = Field(min_length=1)
+    name: str  # can be empty string, so no min_length
+    score: int
+    is_published: bool
+    is_paid: bool
+    publishers: list[RenovelsPublisherShort]
 
 
 class RenovelsChaptersPageResponse(RenovelsBaseModel):
-    content: list[RenovelsChapterShort]
+    next: int | None
+    previous: int | None
+    results: list[RenovelsChapterShort]
+
+
+class CoverImage(RenovelsBaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    mid: str
+    high: str
+
+
+class Publisher(RenovelsBaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: int
+    name: str
+    dir: str
+    show_donate: bool
+    donate_page_text: str | None = None
+    cover: CoverImage
+    tagline: str | None = None
+    img: CoverImage
+
+
+class Server(RenovelsBaseModel):
+    id: int
+    name: str
+    link: str
+    fallback_link: str
+
+
+class ChapterNavigation(RenovelsBaseModel):
+    id: int
+    tome: int
+    chapter: str
+    index: int
+    is_paid: bool
+
+
+class RenovelsChapterResponse(RenovelsBaseModel):
+    id: int
+    tome: int
+    chapter: str
+    name: str
+    score: int
+    upload_date: datetime
+    content: str
+    is_paid: bool
+    purchase_type: int
+    title_id: int
+    volume_id: int | None = None
+    branch_id: int
+    price: int | None = None
+    pub_date: datetime | None = None
+    index: int
+    delay_pub_date: datetime | None = None
+    is_published: bool
+    server: Server | None = None
+    publishers: list[Publisher]
+    rated: bool
+    is_bought: bool
+    previous: ChapterNavigation | None = None
+    next: ChapterNavigation | None = None
+    content_type: str

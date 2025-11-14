@@ -12,6 +12,7 @@ from yarl import URL
 from domain import Chapter, Image, LoadedChapter, LoadedImage, MainPageInfo
 from infra.exceptions.base import CatchImageWithoutSrcError
 from infra.main_page.exceptions import MainPageParsingError
+from infra.main_page.parsing import find_required_tag, require_attr, require_tag, require_text
 from logic import ChapterLoader, ImageLoader, MainPageLoader
 from utils.bs4 import get_soup
 
@@ -87,28 +88,32 @@ class TextContainerParser:
     @property
     def text_container(self) -> Tag:
         class_ = id_name = "text-container"
-        text_container = self.soup.find("div", id=id_name, class_=class_)
-        if not isinstance(text_container, Tag):
-            raise MainPageParsingError(detail="text-container not found")
-        return text_container
+        return find_required_tag(
+            self.soup,
+            "div",
+            id=id_name,
+            class_=class_,
+            detail="text-container not found",
+        )
 
     @property
     def title(self) -> str:
-        title = self.text_container.find("h1")
-        if title is None:
-            raise MainPageParsingError(detail="title tag missing inside text-container")
-        result = title.text.strip()
-        if not result:
-            raise MainPageParsingError(detail="chapter title is empty")
-        return result
+        title = find_required_tag(
+            self.text_container,
+            "h1",
+            detail="title tag missing inside text-container",
+        )
+        return require_text(title, detail="chapter title is empty")
 
     @property
     def context_text(self) -> Tag:
         class_ = "content-text"
-        context_text = self.text_container.find("div", class_=class_)
-        if not isinstance(context_text, Tag):
-            raise MainPageParsingError(detail="content-text container missing")
-        return context_text
+        return find_required_tag(
+            self.text_container,
+            "div",
+            class_=class_,
+            detail="content-text container missing",
+        )
 
     @property
     def paragraphs(self) -> Sequence[str]:
@@ -131,67 +136,109 @@ class TlRulateLoader(MainPageLoader):
     @override
     async def load(self) -> MainPageInfo:
         main_page_soup = await get_soup(self.session, self.url)
-        logger.debug("getting chapters url")
-        chapter_rows = main_page_soup.find_all(class_="chapter_row")
-        book_header = main_page_soup.find(class_="book-header")
-        if not isinstance(book_header, Tag):
-            raise MainPageParsingError(detail="book-header container missing", page_url=self.url)
-        header_title = book_header.findNext("h1")  # pyright: ignore
-        if not isinstance(header_title, Tag):
-            raise MainPageParsingError(detail="book title tag missing", page_url=self.url)
-        title = header_title.text.strip()
-        logger.debug(f"get {title=}")
-        if len(title) == 0:
-            raise MainPageParsingError(detail="book title is empty", page_url=self.url)
+        parsed = TlRulateMainPageParser(main_page_soup, self.url, self.domain).parse()
 
-        covers = await self.get_covers(main_page_soup)
-        chapters = self.to_chapters(chapter_rows)
+        covers = await self._load_covers(parsed.cover_urls)
+        chapters = [
+            Chapter(id=index, name=info.name, url=info.url)
+            for index, info in enumerate(parsed.chapters, 1)
+        ]
 
         return MainPageInfo(
-            chapters=list(chapters),
-            title=title,
+            chapters=chapters,
+            title=parsed.title,
             covers=covers,
         )
 
-    async def get_covers(self, main_page_soup: Tag) -> Sequence[LoadedImage]:
+    async def _load_covers(self, urls: Sequence[URL]) -> Sequence[LoadedImage]:
         logger.debug("loading covers")
-        container = main_page_soup.find(class_="images")
-        if not isinstance(container, Tag):
-            logger.error("can't get cover images")
-            return []
-        image_urls = self.parse_images_urls(container)
-
         images: list[LoadedImage | None] = []
-        for i in image_urls:
-            image = Image(url=i)
+        for url in urls:
+            image = Image(url=url)
             images.append(await self.image_loader.load_image(image))
         logger.debug(f"load {len(images)} covers")
         return [i for i in images if i]
 
-    def to_chapters(self, rows: Iterable[Tag]):
-        for index, row in enumerate(rows, 1):
-            if PreParsedChapter(row).can_read:
-                link_tag = row.find_next("a")
-                if not isinstance(link_tag, Tag):
-                    raise MainPageParsingError(detail="chapter row anchor missing", page_url=self.url)
-                href = link_tag.get("href")
-                if not href:
-                    raise MainPageParsingError(detail="chapter link href missing", page_url=self.url)
-                url = self.domain.with_path(str(href))
-                name = link_tag.text.strip()
-                if not name:
-                    raise MainPageParsingError(detail="chapter link title empty", page_url=self.url)
-                yield Chapter(id=index, name=name, url=url)
 
-    def normalize_url(self, url: URL) -> URL:
+@dataclass(slots=True)
+class TlRulateChapterInfo:
+    name: str
+    url: URL
+
+
+@dataclass(slots=True)
+class TlRulateMainPageData:
+    title: str
+    cover_urls: Sequence[URL]
+    chapters: Sequence[TlRulateChapterInfo]
+
+
+@dataclass(slots=True)
+class TlRulateMainPageParser:
+    soup: BeautifulSoup
+    page_url: URL
+    domain: URL
+
+    def parse(self) -> TlRulateMainPageData:
+        return TlRulateMainPageData(
+            title=self._parse_title(),
+            cover_urls=list(self._parse_cover_urls()),
+            chapters=list(self._parse_chapters()),
+        )
+
+    def _parse_title(self) -> str:
+        book_header = find_required_tag(
+            self.soup,
+            class_="book-header",
+            detail="book-header container missing",
+            page_url=self.page_url,
+        )
+        header_title = require_tag(
+            book_header.find_next("h1"),
+            detail="book title tag missing",
+            page_url=self.page_url,
+        )
+        title = require_text(header_title, detail="book title is empty", page_url=self.page_url)
+        logger.debug(f"get title={title}")
+        return title
+
+    def _parse_cover_urls(self) -> Iterable[URL]:
+        container = self.soup.find(class_="images")
+        if not isinstance(container, Tag):
+            logger.error("can't get cover images")
+            return []
+        for img in container.find_all("img"):
+            src = require_attr(
+                img,
+                "src",
+                detail="cover image src missing",
+                page_url=self.page_url,
+            )
+            yield self._normalize_url(URL(str(src)))
+
+    def _parse_chapters(self) -> Iterable[TlRulateChapterInfo]:
+        rows = self.soup.find_all(class_="chapter_row")
+        if not rows:
+            logger.warning("chapter list is empty")
+        for row in rows:
+            if not PreParsedChapter(row).can_read:
+                continue
+            link_tag = require_tag(
+                row.find_next("a"),
+                detail="chapter row anchor missing",
+                page_url=self.page_url,
+            )
+            href = require_attr(
+                link_tag,
+                "href",
+                detail="chapter link href missing",
+                page_url=self.page_url,
+            )
+            name = require_text(link_tag, detail="chapter link title empty", page_url=self.page_url)
+            url = self._normalize_url(URL(str(href)))
+            yield TlRulateChapterInfo(name=name, url=url)
+
+    def _normalize_url(self, url: URL) -> URL:
         if url.is_absolute():
             return url
         return self.domain.with_path(url.path)
-
-    def parse_images_urls(self, content_text: Tag) -> Iterable[URL]:
-        for i in content_text.find_all("img"):
-            src = i.get("src")
-            if src is None:
-                raise CatchImageWithoutSrcError(tag_name=i.name)
-            url_src = URL(str(src))
-            yield self.normalize_url(url_src)

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
-from core import BaseAppError, BaseInfraError
+from infra.exceptions.base import BaseInfraError
+from logic.exceptions.base import BaseAppError
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14,10 +15,7 @@ class FzfError(BaseInfraError):
 
     @property
     def message(self) -> str:
-        base = (
-            "Failed to capture a selection from fzf prompt "
-            f"{self.placeholder!r}."
-        )
+        base = f"Failed to capture a selection from fzf prompt {self.placeholder!r}."
         if self.raw_value is not None:
             return f"{base} Last raw value: {self.raw_value!r}."
         return base

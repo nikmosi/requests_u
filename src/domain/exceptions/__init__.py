@@ -1,3 +1,3 @@
-from .base import BaseDomainError
+from core import BaseDomainError
 
 __all__ = ["BaseDomainError"]

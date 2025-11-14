@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 from collections.abc import Iterable
+from typing import TypeVar
 
 from infra.saver import EbookSaver, FilesSaver
 from logic import Saver
 
-from .exceptions import FindSaverException
+from .exceptions import FindSaverError
+
+SaverType = TypeVar("SaverType", bound=Saver)
 
 
-def inheritors[T](klass: type[T]) -> set[type[T]]:
-    wow = [EbookSaver.__name__, FilesSaver.__name__]
-    wow = str(wow)
-    subclasses = set[type[T]]()
-    work: list[type[T]] = [klass]
+def inheritors(klass: type[SaverType]) -> set[type[SaverType]]:
+    subclasses: set[type[SaverType]] = set()
+    work: list[type[SaverType]] = [klass]
     while work:
         parent = work.pop()
         for child in parent.__subclasses__():
@@ -25,7 +28,9 @@ def get_all_saver_classes() -> Iterable[type[Saver]]:
 
 
 def get_saver_by_name(saver_name: str) -> type[Saver]:
-    for saver in inheritors(Saver):
+    saver_classes = inheritors(Saver)
+    all_savers = tuple(sorted(i.__name__ for i in saver_classes))
+    for saver in saver_classes:
         if saver.__name__ == saver_name:
             return saver
-    raise FindSaverException(saver_name)
+    raise FindSaverError(saver_name=saver_name, available_savers=all_savers)

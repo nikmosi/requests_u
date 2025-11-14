@@ -11,7 +11,7 @@ from ebooklib import epub
 from loguru import logger
 
 from domain import LoadedChapter, LoadedImage
-from infra.exceptions.base import SaverUsingWithoutWithException
+from infra.exceptions.base import SaverUsingWithoutWithError
 from logic import Saver
 
 
@@ -61,7 +61,7 @@ class EbookSaver(Saver):
         if not self._is_entered:
             msg = "this saver require 'with'"
             logger.error(msg)
-            raise SaverUsingWithoutWithException()
+            raise SaverUsingWithoutWithError(saver_name=type(self).__name__)
         html = epub.EpubHtml(
             title=loaded_chapter.base_name,
             file_name=f"chapters/{loaded_chapter.base_name}.xhtml",

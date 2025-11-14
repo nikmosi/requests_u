@@ -1,10 +1,17 @@
 from dataclasses import dataclass
 from datetime import timedelta
 
+import tenacity
 from loguru import logger
-from tenacity import AsyncRetrying, stop_after_attempt, wait_chain, wait_fixed
+from tenacity import (
+    AsyncRetrying,
+    stop_after_attempt,
+    wait_chain,
+    wait_fixed,
+)
 
 from domain import Chapter
+from logic.exceptions.base import RetryableError
 from logic.loader import ChapterLoader
 from logic.saver import Saver
 
@@ -25,6 +32,7 @@ class SaverLoaderConnector:
                 wait_fixed(timedelta(seconds=120)),
                 wait_fixed(timedelta(seconds=600)),
             ),
+            retry=tenacity.retry_if_exception_type(RetryableError),
             reraise=True,
         ):
             with attempt:
@@ -33,7 +41,6 @@ class SaverLoaderConnector:
                 try:
                     loaded_chapter = await self.chapter_loader.load_chapter(chapter)
                     await self.saver.save_chapter(loaded_chapter)
-                # TODO: make more specific errors for loading, parsing, saving
                 except Exception as e:
                     logger.warning(
                         f"⚠️ Ошибка при обработке {chapter.base_name}: {e!r} "

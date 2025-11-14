@@ -17,6 +17,7 @@ from infra.main_page.exceptions import (
 )
 from infra.main_page.parsing import find_required_tag, require_attr, require_text
 from logic import ChapterLoader, MainPageLoader
+from logic.exceptions.base import RetryableError
 from utils.bs4 import get_soup
 
 
@@ -40,8 +41,10 @@ class IfreedomChapterParser:
     def _ensure_no_captcha(self) -> None:
         if self.soup.find("form", class_=["wpcf7-form", "init"]):
             logger.error("got captcha")
-            raise CaptchaDetectedError(
-                site_name="ifreedom", page_url=self.page_url, detail="captcha"
+            raise RetryableError(
+                exception=CaptchaDetectedError(
+                    site_name="ifreedom", page_url=self.page_url, detail="captcha"
+                )
             )
 
     def _parse_title(self) -> str:
@@ -73,10 +76,12 @@ class IfreedomChapterParser:
 
         if container.find("div", class_="single-notice"):  # pyright: ignore
             logger.error("got stoper")
-            raise ChapterAccessRestrictedError(
-                detail="chapter contains single-notice block",
-                reason="single notice",
-                page_url=self.page_url,
+            raise RetryableError(
+                exception=ChapterAccessRestrictedError(
+                    detail="chapter contains single-notice block",
+                    reason="single notice",
+                    page_url=self.page_url,
+                )
             )
 
         paragraphs = [p.text for p in container.find_all("p") if p.text.strip()]

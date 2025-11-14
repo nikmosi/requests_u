@@ -10,7 +10,7 @@ from loguru import logger
 from yarl import URL
 
 from domain import Chapter, Image, LoadedChapter, LoadedImage, MainPageInfo
-from infra.exceptions.base import CatchImageWithoutSrc
+from infra.exceptions.base import CatchImageWithoutSrcError
 from logic import ChapterLoader, ImageLoader, MainPageLoader
 from utils.bs4 import get_soup
 
@@ -111,7 +111,7 @@ class TextContainerParser:
         for i in self.context_text.find_all("img"):
             src = i.get("src")
             if src is None:
-                raise CatchImageWithoutSrc
+                raise CatchImageWithoutSrcError(tag_name=i.name)
             yield URL(str(src))
 
 
@@ -179,6 +179,6 @@ class TlRulateLoader(MainPageLoader):
         for i in content_text.find_all("img"):
             src = i.get("src")
             if src is None:
-                raise CatchImageWithoutSrc
+                raise CatchImageWithoutSrcError(tag_name=i.name)
             url_src = URL(str(src))
             yield self.normalize_url(url_src)

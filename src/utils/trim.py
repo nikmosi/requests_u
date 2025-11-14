@@ -1,30 +1,40 @@
+from __future__ import annotations
+
 import subprocess as sb
 from collections.abc import Iterable, Sequence
-from typing import TypeVar, cast
+from typing import TYPE_CHECKING, TypeVar
 
 from loguru import logger
 
-# pyright: reportMissingTypeStubs=false
-from pipe import skip, take
-
-from config.data import TrimSettings
 from utils.exceptions import FzfError
 
-trim_type = TypeVar("trim_type")
+if TYPE_CHECKING:
+    from config.data import TrimSettings
+
+TrimType = TypeVar("TrimType")
 
 
-def trim[T](args: TrimSettings, chapters: Iterable[T]) -> Iterable[T]:
+def trim(args: TrimSettings, chapters: Iterable[TrimType]) -> Iterable[TrimType]:
     if args.interactive:
         return interactive_trim(chapters)
     else:
         return in_bound_trim(chapters, args.from_, args.to)
 
 
-def in_bound_trim[T](chapters: Iterable[T], start: float, end: float) -> Iterable[T]:
-    return cast(Iterable[T], chapters | take(end) | skip(start))
+def in_bound_trim(
+    chapters: Iterable[TrimType], start: float, end: float
+) -> Iterable[TrimType]:
+    start_index = int(start)
+    end_index = int(end)
+    for index, chapter in enumerate(chapters):
+        if index < start_index:
+            continue
+        if index >= end_index:
+            break
+        yield chapter
 
 
-def interactive_trim[T](elements: Iterable[T]) -> Iterable[T]:
+def interactive_trim(elements: Iterable[TrimType]) -> Iterable[TrimType]:
     chapters_list = list(elements)
     base_names = list(map(str, chapters_list))
 
@@ -49,8 +59,8 @@ def fzf_filter(data: Sequence[str], placeholder: str = "Filter...") -> int:
     logger.debug(f"{selected_item=}")
     try:
         index = data.index(selected_item)
-    except ValueError as e:
-        raise FzfError from e
+    except ValueError as exc:
+        raise FzfError(placeholder=placeholder, raw_value=selected_item) from exc
     if not selected_item:
-        raise FzfError
+        raise FzfError(placeholder=placeholder, raw_value=selected_item)
     return index

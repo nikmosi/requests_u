@@ -2,7 +2,7 @@ import asyncio
 import operator
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import cast, override
+from typing import override
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
@@ -11,6 +11,7 @@ from yarl import URL
 
 from domain import Chapter, Image, LoadedChapter, LoadedImage, MainPageInfo
 from infra.exceptions.base import CatchImageWithoutSrcError
+from infra.main_page.exceptions import MainPageParsingError
 from logic import ChapterLoader, ImageLoader, MainPageLoader
 from utils.bs4 import get_soup
 
@@ -87,20 +88,27 @@ class TextContainerParser:
     def text_container(self) -> Tag:
         class_ = id_name = "text-container"
         text_container = self.soup.find("div", id=id_name, class_=class_)
-        return cast(Tag, text_container)
+        if not isinstance(text_container, Tag):
+            raise MainPageParsingError(detail="text-container not found")
+        return text_container
 
     @property
     def title(self) -> str:
         title = self.text_container.find("h1")
         if title is None:
-            raise ValueError(title)
-        return title.text
+            raise MainPageParsingError(detail="title tag missing inside text-container")
+        result = title.text.strip()
+        if not result:
+            raise MainPageParsingError(detail="chapter title is empty")
+        return result
 
     @property
     def context_text(self) -> Tag:
         class_ = "content-text"
         context_text = self.text_container.find("div", class_=class_)
-        return cast(Tag, context_text)
+        if not isinstance(context_text, Tag):
+            raise MainPageParsingError(detail="content-text container missing")
+        return context_text
 
     @property
     def paragraphs(self) -> Sequence[str]:
@@ -125,17 +133,16 @@ class TlRulateLoader(MainPageLoader):
         main_page_soup = await get_soup(self.session, self.url)
         logger.debug("getting chapters url")
         chapter_rows = main_page_soup.find_all(class_="chapter_row")
-        title = cast(
-            str,
-            main_page_soup.find(class_="book-header")
-            .findNext("h1")  # pyright: ignore
-            .text.strip(),  # pyright: ignore
-        )
+        book_header = main_page_soup.find(class_="book-header")
+        if not isinstance(book_header, Tag):
+            raise MainPageParsingError(detail="book-header container missing", page_url=self.url)
+        header_title = book_header.findNext("h1")  # pyright: ignore
+        if not isinstance(header_title, Tag):
+            raise MainPageParsingError(detail="book title tag missing", page_url=self.url)
+        title = header_title.text.strip()
         logger.debug(f"get {title=}")
         if len(title) == 0:
-            msg = "can't get title"
-            logger.error(msg)
-            exit(msg)
+            raise MainPageParsingError(detail="book title is empty", page_url=self.url)
 
         covers = await self.get_covers(main_page_soup)
         chapters = self.to_chapters(chapter_rows)
@@ -164,10 +171,16 @@ class TlRulateLoader(MainPageLoader):
     def to_chapters(self, rows: Iterable[Tag]):
         for index, row in enumerate(rows, 1):
             if PreParsedChapter(row).can_read:
-                a = cast(Tag, row.find_next("a"))
-                href = cast(str, a.get("href"))
-                url = self.domain.with_path(href)
-                name = a.text
+                link_tag = row.find_next("a")
+                if not isinstance(link_tag, Tag):
+                    raise MainPageParsingError(detail="chapter row anchor missing", page_url=self.url)
+                href = link_tag.get("href")
+                if not href:
+                    raise MainPageParsingError(detail="chapter link href missing", page_url=self.url)
+                url = self.domain.with_path(str(href))
+                name = link_tag.text.strip()
+                if not name:
+                    raise MainPageParsingError(detail="chapter link title empty", page_url=self.url)
                 yield Chapter(id=index, name=name, url=url)
 
     def normalize_url(self, url: URL) -> URL:

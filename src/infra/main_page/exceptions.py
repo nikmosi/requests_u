@@ -75,6 +75,19 @@ class JsonParsingError(BaseInfraError):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class JsonValidationError(BaseInfraError):
+    detail: str
+    page_url: URL | None = None
+
+    @property
+    def message(self) -> str:
+        message = f"JSON payload does not match the expected schema: {self.detail}."
+        if self.page_url:
+            message += f" URL: {self.page_url}."
+        return message
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class MissingJsonFieldError(BaseInfraError):
     field_path: str
     page_url: URL | None = None

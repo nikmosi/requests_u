@@ -2,10 +2,10 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class BaseDomainError(Exception):
-    """Base error for the domain layer."""
+class BaseAppError(Exception):
+    """Base error for the application layer."""
 
-    _message: str = "Occur exception in domain"
+    _message: str = "Occur error in application layer."
 
     @property
     def message(self) -> str:

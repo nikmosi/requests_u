@@ -2,7 +2,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from core import BaseInfraError
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class BaseInfraError(Exception):
+    """Base error for the infrastructure layer."""
+
+    _message: str = "Occur error in infrastructure layer."
+
+    @property
+    def message(self) -> str:
+        return self._message
+
+    def __str__(self) -> str:  # pragma: no cover - trivial
+        return self.message
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

@@ -31,7 +31,11 @@ class RenovelsChapterLoader(ChapterLoader):
             raise JsonParsingError(page_url=chapter.url) from exc
         logger.debug(f"get {chapter.base_name}")
         content = _extract_field(res, ["content"], chapter.url)
-        title = _ensure_str(_extract_field(content, ["chapter"], chapter.url), "content.chapter", chapter.url)
+        title = _ensure_str(
+            _extract_field(content, ["chapter"], chapter.url),
+            "content.chapter",
+            chapter.url,
+        )
         content_p = _ensure_str(
             _extract_field(content, ["content"], chapter.url),
             "content.content",
@@ -60,17 +64,23 @@ class RenovelsLoader(MainPageLoader):
         main_page_soup = await get_soup(self.session, self.url)
         scripts = main_page_soup.find(id="__NEXT_DATA__")
         if scripts is None:
-            raise MainPageParsingError(detail="__NEXT_DATA__ script not found", page_url=self.url)
+            raise MainPageParsingError(
+                detail="__NEXT_DATA__ script not found", page_url=self.url
+            )
         try:
             data = json.loads(scripts.get_text())
         except JSONDecodeError as exc:
             raise JsonParsingError(page_url=self.url) from exc
 
         # TODO: create model for response
-        content = _extract_field(data, ["props", "pageProps", "fallbackData", "content"], self.url)
+        content = _extract_field(
+            data, ["props", "pageProps", "fallbackData", "content"], self.url
+        )
         branches = _extract_field(content, ["branches"], self.url)
         if not isinstance(branches, list) or not branches:
-            raise MissingJsonFieldError(field_path="content.branches", page_url=self.url)
+            raise MissingJsonFieldError(
+                field_path="content.branches", page_url=self.url
+            )
         branch_info = branches[0]
         if not isinstance(branch_info, dict):
             raise InvalidJsonFieldError(
@@ -80,16 +90,24 @@ class RenovelsLoader(MainPageLoader):
             )
         img = _extract_field(content, ["img"], self.url)
         if not isinstance(img, dict):
-            raise InvalidJsonFieldError(field_path="content.img", expected="object", page_url=self.url)
+            raise InvalidJsonFieldError(
+                field_path="content.img", expected="object", page_url=self.url
+            )
         img_path = _ensure_str(img.get("high"), "content.img.high", self.url)
-        branch_id = _ensure_int(branch_info.get("id"), "content.branches[0].id", self.url)
+        branch_id = _ensure_int(
+            branch_info.get("id"), "content.branches[0].id", self.url
+        )
         count_chapters = _ensure_int(
             _extract_field(content, ["count_chapters"], self.url),
             "content.count_chapters",
             self.url,
         )
 
-        title = _ensure_str(_extract_field(content, ["main_name"], self.url), "content.main_name", self.url)
+        title = _ensure_str(
+            _extract_field(content, ["main_name"], self.url),
+            "content.main_name",
+            self.url,
+        )
         image = Image(self.domain.with_path(img_path))
         cover = await self.image_loader.load_image(image)
 
@@ -158,7 +176,9 @@ def _extract_field(data: Any, path: Sequence[str], page_url: URL) -> Any:
 
 def _ensure_str(value: Any, field_path: str, page_url: URL) -> str:
     if not isinstance(value, str) or not value:
-        raise InvalidJsonFieldError(field_path=field_path, expected="non-empty string", page_url=page_url)
+        raise InvalidJsonFieldError(
+            field_path=field_path, expected="non-empty string", page_url=page_url
+        )
     return value
 
 
@@ -166,4 +186,6 @@ def _ensure_int(value: Any, field_path: str, page_url: URL) -> int:
     try:
         return int(value)
     except (TypeError, ValueError) as exc:
-        raise InvalidJsonFieldError(field_path=field_path, expected="integer", page_url=page_url) from exc
+        raise InvalidJsonFieldError(
+            field_path=field_path, expected="integer", page_url=page_url
+        ) from exc

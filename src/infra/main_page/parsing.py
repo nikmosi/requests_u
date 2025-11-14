@@ -8,7 +8,6 @@ from yarl import URL
 
 from infra.main_page.exceptions import MainPageParsingError
 
-
 TagParent = BeautifulSoup | Tag
 
 
@@ -24,8 +23,8 @@ def find_required_tag(
     *,
     detail: str,
     page_url: URL | None = None,
-    class_: str | list[str] | None = None,
-    id: str | None = None,
+    class_: str | list[str] = "",
+    id: str = "",
     attrs: dict[str, Any] | None = None,
 ) -> Tag:
     attrs = attrs or {}

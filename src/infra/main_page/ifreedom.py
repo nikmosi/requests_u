@@ -40,7 +40,9 @@ class IfreedomChapterParser:
     def _ensure_no_captcha(self) -> None:
         if self.soup.find("form", class_=["wpcf7-form", "init"]):
             logger.error("got captcha")
-            raise CaptchaDetectedError(site_name="ifreedom", page_url=self.page_url, detail="captcha")
+            raise CaptchaDetectedError(
+                site_name="ifreedom", page_url=self.page_url, detail="captcha"
+            )
 
     def _parse_title(self) -> str:
         block_container = find_required_tag(
@@ -56,7 +58,9 @@ class IfreedomChapterParser:
             detail="chapter title not found",
             page_url=self.page_url,
         )
-        return require_text(title_tag, detail="chapter title is empty", page_url=self.page_url)
+        return require_text(
+            title_tag, detail="chapter title is empty", page_url=self.page_url
+        )
 
     def _parse_paragraphs(self) -> Sequence[str]:
         container = find_required_tag(
@@ -130,7 +134,9 @@ class IfreedomMainPageParser:
             detail="book title not found",
             page_url=self.page_url,
         )
-        return require_text(title_tag, detail="book title is empty", page_url=self.page_url)
+        return require_text(
+            title_tag, detail="book title is empty", page_url=self.page_url
+        )
 
     def _parse_cover_url(self) -> URL:
         image_container = find_required_tag(
@@ -167,7 +173,9 @@ class IfreedomMainPageParser:
         )
         chapters_line = tab_content.find_all("div", class_="chapterinfo")
         if not chapters_line:
-            raise MainPageParsingError(detail="chapter list is empty", page_url=self.page_url)
+            raise MainPageParsingError(
+                detail="chapter list is empty", page_url=self.page_url
+            )
         for line in reversed(chapters_line):
             tag_a = find_required_tag(
                 line,
@@ -189,7 +197,9 @@ class IfreedomMainPageParser:
                 continue
             name = tag_a.text.strip()
             if not name:
-                raise MainPageParsingError(detail="chapter anchor without name", page_url=self.page_url)
+                raise MainPageParsingError(
+                    detail="chapter anchor without name", page_url=self.page_url
+                )
             chapters.append(IfreedomChapterInfo(name=name, url=URL(href)))
         return chapters, skipped_pay, skipped_vip
 

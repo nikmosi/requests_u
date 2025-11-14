@@ -12,10 +12,14 @@ from domain import Chapter, LoadedChapter, MainPageInfo
 from domain.images import Image
 from infra.main_page.exceptions import (
     EmptyChapterContentError,
-    MainPageParsingError,
     PaginationParsingError,
 )
-from infra.main_page.parsing import find_required_tag, require_attr, require_tag, require_text
+from infra.main_page.parsing import (
+    find_required_tag,
+    require_attr,
+    require_tag,
+    require_text,
+)
 from logic import ChapterLoader, MainPageLoader
 from utils.bs4 import get_soup
 
@@ -45,7 +49,9 @@ class RanobesChapterParser:
             detail="chapter title not found",
             page_url=self.page_url,
         )
-        title = require_text(title_tag, detail="chapter title is empty", page_url=self.page_url)
+        title = require_text(
+            title_tag, detail="chapter title is empty", page_url=self.page_url
+        )
         paragraphs = [i.text for i in container.find_all("p") if i.text]
         if not paragraphs:
             article = container.find("div", id="arrticle", class_="text")
@@ -167,7 +173,9 @@ class RanobesPaginationParser:
             pages_with_num[num] = str(href)
 
         if not pages_with_num:
-            raise PaginationParsingError(detail="pagination list is empty", page_url=self.page_url)
+            raise PaginationParsingError(
+                detail="pagination list is empty", page_url=self.page_url
+            )
 
         max_page_num = max(pages_with_num.keys())
         max_page = pages_with_num[max_page_num]

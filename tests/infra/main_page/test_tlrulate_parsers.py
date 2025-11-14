@@ -16,13 +16,16 @@ def test_tlrulate_main_page_parser_returns_chapters_and_covers() -> None:
         <img src="/cover1.jpg" />
         <img src="https://cdn/cover2.jpg" />
     </div>
-    <div class="chapter_row"><a href="/c1">Chapter 1</a><a class="btn" href="/c1">Read</a></div>
+    <div class="chapter_row">
+    <a href="/c1">Chapter 1</a><a class="btn" href="/c1">Read</a></div>
     <div class="chapter_row">
         <a href="/c2">Chapter 2</a>
         <a class="btn" href="/c2">Read</a>
     </div>
     """
-    parser = TlRulateMainPageParser(make_soup(html), URL("https://tl.rulate.ru/book"), URL("https://tl.rulate.ru"))
+    parser = TlRulateMainPageParser(
+        make_soup(html), URL("https://tl.rulate.ru/book"), URL("https://tl.rulate.ru")
+    )
 
     parsed = parser.parse()
 
@@ -32,7 +35,11 @@ def test_tlrulate_main_page_parser_returns_chapters_and_covers() -> None:
 
 
 def test_tlrulate_main_page_parser_requires_header() -> None:
-    parser = TlRulateMainPageParser(make_soup("<div></div>"), URL("https://tl.rulate.ru/book"), URL("https://tl.rulate.ru"))
+    parser = TlRulateMainPageParser(
+        make_soup("<div></div>"),
+        URL("https://tl.rulate.ru/book"),
+        URL("https://tl.rulate.ru"),
+    )
 
     try:
         parser.parse()

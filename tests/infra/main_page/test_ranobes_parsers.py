@@ -1,7 +1,11 @@
 from bs4 import BeautifulSoup
 from yarl import URL
 
-from infra.main_page.exceptions import EmptyChapterContentError, MainPageParsingError, PaginationParsingError
+from infra.main_page.exceptions import (
+    EmptyChapterContentError,
+    MainPageParsingError,
+    PaginationParsingError,
+)
 from infra.main_page.ranobes import (
     RanobesChapterListParser,
     RanobesChapterParser,
@@ -33,7 +37,8 @@ def test_ranobes_main_page_parser_extracts_fields() -> None:
 
 def test_ranobes_main_page_parser_requires_cover() -> None:
     html = """
-    <div class="r-fullstory-chapters-foot"><a href="first"><a href="/chapters/2" /></a></div>
+    <div class="r-fullstory-chapters-foot"><a href="first">
+    <a href="/chapters/2" /></a></div>
     <h1 class="title">Sample</h1>
     """
     parser = RanobesMainPageParser(make_soup(html), URL("https://ranobes.net/book"))
@@ -63,7 +68,9 @@ def test_ranobes_pagination_parser_creates_urls() -> None:
 
 
 def test_ranobes_pagination_parser_requires_links() -> None:
-    parser = RanobesPaginationParser(make_soup("<div class='pages'></div>"), URL("https://ranobes.net/book"))
+    parser = RanobesPaginationParser(
+        make_soup("<div class='pages'></div>"), URL("https://ranobes.net/book")
+    )
 
     try:
         parser.parse()
@@ -80,7 +87,9 @@ def test_ranobes_chapter_list_parser_extracts_entries() -> None:
         <div class="cat_line"><a href="https://ranobes.net/2" title="Ch 2"></a></div>
     </div>
     """
-    parser = RanobesChapterListParser(make_soup(html), URL("https://ranobes.net/page/1"))
+    parser = RanobesChapterListParser(
+        make_soup(html), URL("https://ranobes.net/page/1")
+    )
 
     entries = parser.parse()
 

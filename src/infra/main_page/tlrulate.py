@@ -11,8 +11,12 @@ from yarl import URL
 
 from domain import Chapter, Image, LoadedChapter, LoadedImage, MainPageInfo
 from infra.exceptions.base import CatchImageWithoutSrcError
-from infra.main_page.exceptions import MainPageParsingError
-from infra.main_page.parsing import find_required_tag, require_attr, require_tag, require_text
+from infra.main_page.parsing import (
+    find_required_tag,
+    require_attr,
+    require_tag,
+    require_text,
+)
 from logic import ChapterLoader, ImageLoader, MainPageLoader
 from utils.bs4 import get_soup
 
@@ -198,7 +202,9 @@ class TlRulateMainPageParser:
             detail="book title tag missing",
             page_url=self.page_url,
         )
-        title = require_text(header_title, detail="book title is empty", page_url=self.page_url)
+        title = require_text(
+            header_title, detail="book title is empty", page_url=self.page_url
+        )
         logger.debug(f"get title={title}")
         return title
 
@@ -206,7 +212,7 @@ class TlRulateMainPageParser:
         container = self.soup.find(class_="images")
         if not isinstance(container, Tag):
             logger.error("can't get cover images")
-            return []
+            return list[URL]()
         for img in container.find_all("img"):
             src = require_attr(
                 img,
@@ -234,7 +240,9 @@ class TlRulateMainPageParser:
                 detail="chapter link href missing",
                 page_url=self.page_url,
             )
-            name = require_text(link_tag, detail="chapter link title empty", page_url=self.page_url)
+            name = require_text(
+                link_tag, detail="chapter link title empty", page_url=self.page_url
+            )
             url = self._normalize_url(URL(str(href)))
             yield TlRulateChapterInfo(name=name, url=url)
 

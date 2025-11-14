@@ -83,7 +83,7 @@ class RenovelsLoader(MainPageLoader):
         self, branch: int, count_chapters: int
     ) -> Sequence[Chapter]:
         count = 20
-        base_url = URL("https://api.renovels.org/api/titles/chapters/").with_query(
+        base_url = URL("https://api.renovels.org/api/v2/titles/chapters/").with_query(
             branch_id=branch, ordering="index"
         )
         tasks: list[asyncio.Task[str]] = []
@@ -108,15 +108,14 @@ class RenovelsLoader(MainPageLoader):
                 RenovelsChaptersPageResponse, payload, page_url
             )
             ids.extend(chapter.id for chapter in response.content)
-        api = URL("https://api.renovels.org/api/titles/chapters/")
+        api = URL("https://api.renovels.org/api/v2/titles/chapters/")
         return [Chapter(i, str(i), api / str(j)) for i, j in enumerate(ids, 1)]
+
 
 TModel = TypeVar("TModel", bound=BaseModel)
 
 
-def _validate_payload(
-    model_type: type[TModel], payload: Any, page_url: URL
-) -> TModel:
+def _validate_payload(model_type: type[TModel], payload: Any, page_url: URL) -> TModel:
     try:
         return model_type.model_validate(payload)
     except ValidationError as exc:

@@ -23,12 +23,12 @@ def find_required_tag(
     *,
     detail: str,
     page_url: URL | None = None,
-    class_: str | list[str] = "",
-    id: str = "",
+    class_: str | list[str] | None = None,
+    id: str | None = None,
     attrs: dict[str, Any] | None = None,
 ) -> Tag:
     attrs = attrs or {}
-    tag = parent.find(name, class_=class_, id=id, attrs=attrs)
+    tag = parent.find(name, class_=class_, id=id, attrs=attrs)  # pyright: ignore
     return require_tag(tag, detail=detail, page_url=page_url)
 
 

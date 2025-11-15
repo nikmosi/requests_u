@@ -193,6 +193,7 @@ class TlRulateMainPageParser:
     def _parse_title(self) -> str:
         book_header = find_required_tag(
             self.soup,
+            name="ul",
             class_="book-header",
             detail="book-header container missing",
             page_url=self.page_url,

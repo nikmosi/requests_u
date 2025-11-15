@@ -2,52 +2,25 @@ import asyncio
 import json
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
 from json import JSONDecodeError
-from typing import Any, TypeVar, override
+from typing import override
 
-from bs4 import BeautifulSoup
-from loguru import logger
-from pydantic import BaseModel, ValidationError
 from yarl import URL
 
-from domain import Chapter, Image, LoadedChapter, MainPageInfo
+from domain import Chapter, Image, MainPageInfo
 from infra.main_page.exceptions import (
     JsonParsingError,
-    JsonValidationError,
     MainPageParsingError,
 )
+from infra.main_page.renovels.chapter_loader import RenovelsChapterLoader
 from infra.main_page.renovels.models import (
-    RenovelsChapterResponse,
     RenovelsChaptersPageResponse,
     RenovelsScriptData,
 )
 from logic import ChapterLoader, MainPageLoader
 from utils.bs4 import get_soup, get_text_response
 
-
-@dataclass(eq=False)
-class RenovelsChapterLoader(ChapterLoader):
-    @override
-    async def load_chapter(self, chapter: Chapter) -> LoadedChapter:
-        raw_response = await get_text_response(self.session, chapter.url)
-        try:
-            res = json.loads(raw_response)
-        except JSONDecodeError as exc:
-            raise JsonParsingError(page_url=chapter.url) from exc
-        logger.debug(f"get {chapter.base_name}")
-        response = _validate_payload(RenovelsChapterResponse, res, chapter.url)
-        html = BeautifulSoup(response.content, "lxml").find_all("p")
-        paragraphs = [i.text for i in html]
-
-        return LoadedChapter(
-            id=chapter.id,
-            name=chapter.name,
-            url=chapter.url,
-            title=response.name,
-            images=[],
-            paragraphs=paragraphs,
-        )
+from .models import validate_payload
 
 
 class RenovelsLoader(MainPageLoader):
@@ -78,7 +51,7 @@ class RenovelsLoader(MainPageLoader):
         except JSONDecodeError as exc:
             raise JsonParsingError(page_url=self.url) from exc
 
-        content = _validate_payload(RenovelsScriptData, data, self.url)
+        content = validate_payload(RenovelsScriptData, data, self.url)
         content_data = content.queries[0].state.data.json_
         branch_info = content_data.branches[0]
 
@@ -120,19 +93,7 @@ class RenovelsLoader(MainPageLoader):
                 payload = json.loads(task.result())
             except JSONDecodeError as exc:
                 raise JsonParsingError(page_url=page_url) from exc
-            response = _validate_payload(
-                RenovelsChaptersPageResponse, payload, page_url
-            )
+            response = validate_payload(RenovelsChaptersPageResponse, payload, page_url)
             ids.extend(chapter.id for chapter in response.results)
         api = URL("https://api.renovels.org/api/v2/titles/chapters/")
         return [Chapter(i, str(i), api / str(j)) for i, j in enumerate(ids, 1)]
-
-
-TModel = TypeVar("TModel", bound=BaseModel)
-
-
-def _validate_payload(model_type: type[TModel], payload: Any, page_url: URL) -> TModel:
-    try:
-        return model_type.model_validate(payload)
-    except ValidationError as exc:
-        raise JsonValidationError(detail=str(exc), page_url=page_url) from exc

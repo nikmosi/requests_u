@@ -1,12 +1,24 @@
+from datetime import datetime
+from typing import Any, TypeVar
+
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from yarl import URL
+
+from infra.main_page.exceptions import JsonValidationError
+
+TModel = TypeVar("TModel", bound=BaseModel)
+
+
+def validate_payload(model_type: type[TModel], payload: Any, page_url: URL) -> TModel:
+    try:
+        return model_type.model_validate(payload)
+    except ValidationError as exc:
+        raise JsonValidationError(detail=str(exc), page_url=page_url) from exc
+
+
 # =========================
 # BASE
 # =========================
-
-
-from datetime import datetime
-from typing import Any
-
-from pydantic import BaseModel, ConfigDict, Field
 
 
 class RenovelsBaseModel(BaseModel):

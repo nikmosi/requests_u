@@ -23,6 +23,7 @@ dependencies = [
     "dependency-injector>=4.44.0",
     "aiolimiter>=1.2.1",
     "tenacity>=9.1.2",
+    "tqdm>=4.67.1",
 ]
 requires-python = "==3.12.*"
 readme = "README.md"

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import subprocess as sb
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, TypeVar
 
 from loguru import logger
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 TrimType = TypeVar("TrimType")
 
 
-def trim(args: TrimSettings, chapters: Iterable[TrimType]) -> Iterable[TrimType]:
+def trim(args: TrimSettings, chapters: Sequence[TrimType]) -> Sequence[TrimType]:
     if args.interactive:
         return interactive_trim(chapters)
     else:
@@ -22,19 +22,12 @@ def trim(args: TrimSettings, chapters: Iterable[TrimType]) -> Iterable[TrimType]
 
 
 def in_bound_trim(
-    chapters: Iterable[TrimType], start: float, end: float
-) -> Iterable[TrimType]:
-    start_index = int(start)
-    end_index = int(end)
-    for index, chapter in enumerate(chapters):
-        if index < start_index:
-            continue
-        if index >= end_index:
-            break
-        yield chapter
+    chapters: Sequence[TrimType], start: int, end: int
+) -> Sequence[TrimType]:
+    return chapters[start:end]
 
 
-def interactive_trim(elements: Iterable[TrimType]) -> Iterable[TrimType]:
+def interactive_trim(elements: Sequence[TrimType]) -> Sequence[TrimType]:
     chapters_list = list(elements)
     base_names = list(map(str, chapters_list))
 

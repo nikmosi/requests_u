@@ -6,6 +6,7 @@ from itertools import batched
 from aiolimiter import AsyncLimiter
 from dependency_injector.wiring import Provide, inject
 from loguru import logger
+from tqdm import tqdm
 
 from config import Settings
 from containers import Container, LoaderService
@@ -29,6 +30,7 @@ async def run(
     saver_context = SaverContext(
         title=main_page.title, language="ru", covers=main_page.covers
     )
+    progress = tqdm(total=len(trimmed_chapters))
 
     with args.saver(saver_context) as saver:
         connector = SaverLoaderConnector(saver, chapter_loader)
@@ -37,6 +39,7 @@ async def run(
                 for chapter in chunked:
                     async with limiter:
                         tg.create_task(connector.handle(chapter))
+            progress.update(len(chunked))
 
 
 @inject

@@ -24,6 +24,7 @@ dependencies = [
     "aiolimiter>=1.2.1",
     "tenacity>=9.1.2",
     "tqdm>=4.67.1",
+    "fzf-bin>=0.67.0",
 ]
 requires-python = "==3.12.*"
 readme = "README.md"

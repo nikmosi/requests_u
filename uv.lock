@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = "==3.12.*"
 
 [[package]]
@@ -211,6 +211,24 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b8/af/38e51a553dd66eb064cdf193841f16f077585d4d28394c2fa6235cb41765/frozenlist-1.8.0-cp312-cp312-win_amd64.whl", hash = "sha256:34187385b08f866104f0c0617404c8eb08165ab1272e884abc89c112e9c00746", size = 44591, upload-time = "2025-10-06T05:36:24.958Z" },
     { url = "https://files.pythonhosted.org/packages/a7/06/1dc65480ab147339fecc70797e9c2f69d9cea9cf38934ce08df070fdb9cb/frozenlist-1.8.0-cp312-cp312-win_arm64.whl", hash = "sha256:fe3c58d2f5db5fbd18c2987cba06d51b0529f52bc3a6cdc33d3f4eab725104bd", size = 40102, upload-time = "2025-10-06T05:36:26.333Z" },
     { url = "https://files.pythonhosted.org/packages/9a/9a/e35b4a917281c0b8419d4207f4334c8e8c5dbf4f3f5f9ada73958d937dcc/frozenlist-1.8.0-py3-none-any.whl", hash = "sha256:0c18a16eab41e82c295618a77502e17b195883241c563b00f0aa5106fc4eaa0d", size = 13409, upload-time = "2025-10-06T05:38:16.721Z" },
+]
+
+[[package]]
+name = "fzf-bin"
+version = "0.67.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/98/b0/601a85c9a9d1d77dc25f87995e1e305b74cb2fa121f99d5c9cd36d7340dc/fzf_bin-0.67.0.tar.gz", hash = "sha256:dbd6cb4328c0539b68d3a36b84dc8935699b33f6154a62bed63d6cdd60811447", size = 367266, upload-time = "2025-11-23T02:56:16.233Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/de/de1e038008ebde993acf2e0fbb3410d9e8b2f1f5dd82fa1303aa2d64e9c8/fzf_bin-0.67.0-py3-none-android_33_arm64_v8a.whl", hash = "sha256:c3aed15231bb4d82d302924826d9f58889856383cd1d69f2b3053b7d15b050c1", size = 1768371, upload-time = "2025-11-23T02:55:56.026Z" },
+    { url = "https://files.pythonhosted.org/packages/be/cd/e6961fa1c9581182321b1c8e0b60ae3608b9c938f193364fd074ee19da53/fzf_bin-0.67.0-py3-none-macosx_12_0_arm64.whl", hash = "sha256:425519e29d927e802aaa5f7e8a719987d997a7fe950f6892db3d55c34bf74f34", size = 1741647, upload-time = "2025-11-23T02:55:57.981Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/af/8e08026b88d26c61508e9f737ba0b2c37e42c95cc261d2ea245807f19c7b/fzf_bin-0.67.0-py3-none-macosx_12_0_x86_64.whl", hash = "sha256:d60f85a79d9e55ebfc0935395e0fd4e2369c01cbbb8daa6aa7e82da22acca943", size = 1860502, upload-time = "2025-11-23T02:55:59.74Z" },
+    { url = "https://files.pythonhosted.org/packages/57/98/ca5eef6e1550159bd3516efbc5267ed96467c9dc08cf10aee45e0a87368f/fzf_bin-0.67.0-py3-none-manylinux_2_28_aarch64.musllinux_1_2_aarch64.whl", hash = "sha256:6469c71755fb715dc4a01a17a9cad797c91406db74930d540850d984041dfe89", size = 1694869, upload-time = "2025-11-23T02:56:01.568Z" },
+    { url = "https://files.pythonhosted.org/packages/a1/3d/b5a83b1235d0c7339933240e1f014ff6d38b65b14d15e837f3c49c3ab1ef/fzf_bin-0.67.0-py3-none-manylinux_2_28_ppc64le.musllinux_1_2_ppc64le.whl", hash = "sha256:6dda4eae70deaf25b42036b7cfe7a975f7afea8c3d99f6410c43e44661ac6f76", size = 1722541, upload-time = "2025-11-23T02:56:02.902Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/b9/d31df53f5c8ac37ac11e06ce6047de79ea939139bd58636d939688ff7421/fzf_bin-0.67.0-py3-none-manylinux_2_28_riscv64.musllinux_1_2_riscv64.whl", hash = "sha256:70d4309150db7252f062dc6dc8f7b07eaebf4d33d0f93dfe52ae5c5364ffe45b", size = 1737388, upload-time = "2025-11-23T02:56:05.034Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/ba/028683e646470cd3de5ae7239c6e377893d9f7edf788e0ad5b1a39459b53/fzf_bin-0.67.0-py3-none-manylinux_2_28_s390x.musllinux_1_2_s390x.whl", hash = "sha256:d003e685bceacbda8aa91d24179e3ad252f7727fd6f483e04e99c38fce37079d", size = 1824535, upload-time = "2025-11-23T02:56:06.793Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/8b/ecaaeccb3d2f7e0ffb56ad54c7052767f32547ad095edb76bb52a02bb5ab/fzf_bin-0.67.0-py3-none-manylinux_2_28_x86_64.musllinux_1_2_x86_64.whl", hash = "sha256:30d97381a3fcce0a4bca95f8f3145819bd30cd3052e2938fb28212dcccfb4df4", size = 1848837, upload-time = "2025-11-23T02:56:11.257Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/06/aebbcbf2ed5687d40a1cb6e96bc7ec8e86116a671208bcb8b621d4d69cd1/fzf_bin-0.67.0-py3-none-win_amd64.whl", hash = "sha256:2bd65a38baddffff974d1b414db2ffd5bbf9a2285e449a9b1af851314d568591", size = 2009652, upload-time = "2025-11-23T02:56:13.036Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/2b/7d1d69cd9f3d7e0dea10b9984b607cd69b186ac4e77c743f5322d79f9910/fzf_bin-0.67.0-py3-none-win_arm64.whl", hash = "sha256:d911aaa49988ce4d7085b17f2ff6596b45f8c30a339a7a15971b12f2ae46dfd1", size = 1825516, upload-time = "2025-11-23T02:56:14.49Z" },
 ]
 
 [[package]]
@@ -523,6 +541,7 @@ dependencies = [
     { name = "dependency-injector" },
     { name = "ebooklib" },
     { name = "fake-useragent" },
+    { name = "fzf-bin" },
     { name = "loguru" },
     { name = "lxml" },
     { name = "pipe" },
@@ -552,6 +571,7 @@ requires-dist = [
     { name = "dependency-injector", specifier = ">=4.44.0" },
     { name = "ebooklib", specifier = ">=0.18" },
     { name = "fake-useragent", specifier = ">=1.2.1" },
+    { name = "fzf-bin", specifier = ">=0.67.0" },
     { name = "loguru", specifier = ">=0.7.0" },
     { name = "lxml", specifier = ">=4.9.3" },
     { name = "pipe", specifier = ">=2.2" },
